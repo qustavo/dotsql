@@ -53,3 +53,17 @@ rows, err := dot.Query(db, "find-one-user-by-email", "main@example.com")
 ```
 
 For a complete example please refer to [dotsql_test.go](https://github.com/gchaincl/dotsql/blob/master/dotsql_test.go) and [test_schema.sql](https://github.com/gchaincl/dotsql/blob/master/test_schema.sql)
+
+Development
+--
+
+Dotsql is in a very early stage so api may change. Contributions are welcome!
+Integration tests are tagged with `+integration`, so if you want to run them you should:
+```bash
+go test -tags=integration
+```
+
+Otherwise just run:
+```bash
+go test
+```
