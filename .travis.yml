@@ -4,3 +4,6 @@ go:
     - 1.3
     - 1.3.3
     - tip
+
+install: go get -t -tags integration ./...
+script: go test -tags integration
