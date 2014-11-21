@@ -1,14 +1,12 @@
 // +build integration
 
-package dotsql_test
+package dotsql
 
 import (
 	"database/sql"
 	"testing"
 
-	_ "github.com/mattn/go-sqlite3"
-
-	. "github.com/gchaincl/dotsql"
+	_ "code.google.com/p/go-sqlite/go1/sqlite3"
 )
 
 func initDotSql() (*sql.DB, *DotSql) {
@@ -22,7 +20,7 @@ func initDotSql() (*sql.DB, *DotSql) {
 		panic(err)
 	}
 
-	_, err = dotsql.Exec(db, "migrate")
+	_, err = dotsql.Exec(db, "create-users-table")
 	if err != nil {
 		panic(err)
 	}
@@ -95,5 +93,20 @@ func TestSelect(t *testing.T) {
 
 	if email != "foo@bar.com" {
 		t.Errorf("Expect to find user with email == %s, got %s", "foo@bar.com", email)
+	}
+}
+
+func TestPrepare(t *testing.T) {
+	db, dotsql := initDotSql()
+	defer db.Close()
+
+	stmt, err := dotsql.Prepare(db, "drop-users-table")
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = stmt.Exec()
+	if err != nil {
+		t.Errorf("Expected no errors, got: '%s'", err)
 	}
 }

@@ -57,7 +57,7 @@ stmt, err := dot.Prepare(db, "drop-users-table")
 result, err := stmt.Exec()
 ```
 
-For a complete example please refer to [dotsql_test.go](https://github.com/gchaincl/dotsql/blob/master/dotsql_test.go) and [test_schema.sql](https://github.com/gchaincl/dotsql/blob/master/test_schema.sql)
+For a complete example please refer to [integration_test.go](https://github.com/gchaincl/dotsql/blob/master/integration_test.go) and [test_schema.sql](https://github.com/gchaincl/dotsql/blob/master/test_schema.sql)
 
 Development
 --
