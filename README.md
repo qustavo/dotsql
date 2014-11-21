@@ -22,7 +22,7 @@ Usage
 First of all, you need to define queries into a file:
 
 ```sql
--- name: migrate
+-- name: create-users-table
 CREATE TABLE users (
 id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
 name VARCHAR(255),
@@ -32,6 +32,8 @@ email VARCHAR(255)
 INSERT INTO users (name, email) VALUES(?, ?)
 -- name: find-one-user-by-email
 SELECT id,name,email FROM users WHERE email = ? LIMIT 1
+--name: drop-users-table
+DROP TABLE users
 ```
 
 Notice that every query has a name tag (`--name:<some name>`),
@@ -47,14 +49,17 @@ db, err := sql.Open("sqlite3", ":memory:")
 dot, err := dotsql.Load("queries.sql")
 
 // Run queries
-res, err := dot.Exec(db, "migrate")
+res, err := dot.Exec(db, "create-users-table")
 res, err := dot.Exec(db, "create-user", "User Name", "main@example.com")
 rows, err := dot.Query(db, "find-one-user-by-email", "main@example.com")
+
+stmt, err := dot.Prepare(db, "drop-users-table")
+result, err := stmt.Exec()
 ```
 
-For a complete example please refer to [dotsql_test.go](https://github.com/gchaincl/dotsql/blob/master/dotsql_test.go) and [test_schema.sql](https://github.com/gchaincl/dotsql/blob/master/test_schema.sql)
+For a complete example please refer to [integration_test.go](https://github.com/gchaincl/dotsql/blob/master/integration_test.go) and [test_schema.sql](https://github.com/gchaincl/dotsql/blob/master/test_schema.sql)
 
-Development
+Development [![GoDoc](https://godoc.org/github.com/gchaincl/dotsql?status.svg)](https://godoc.org/github.com/gchaincl/dotsql)
 --
 
 Dotsql is in a very early stage so api may change. Contributions are welcome!
