@@ -1,5 +1,6 @@
 dotsql [![Build Status](https://travis-ci.org/gchaincl/dotsql.svg)](https://travis-ci.org/gchaincl/dotsql)
 ======
+[![Gitter](https://badges.gitter.im/Join Chat.svg)](https://gitter.im/gchaincl/dotsql?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 A Golang library for using SQL.
 
