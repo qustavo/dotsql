@@ -59,7 +59,7 @@ result, err := stmt.Exec()
 
 For a complete example please refer to [integration_test.go](https://github.com/gchaincl/dotsql/blob/master/integration_test.go) and [test_schema.sql](https://github.com/gchaincl/dotsql/blob/master/test_schema.sql)
 
-Development
+Development [![GoDoc](https://godoc.org/github.com/gchaincl/dotsql?status.svg)](https://godoc.org/github.com/gchaincl/dotsql)
 --
 
 Dotsql is in a very early stage so api may change. Contributions are welcome!
