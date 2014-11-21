@@ -1,14 +1,12 @@
 // +build integration
 
-package dotsql_test
+package dotsql
 
 import (
 	"database/sql"
 	"testing"
 
 	_ "code.google.com/p/go-sqlite/go1/sqlite3"
-
-	. "github.com/gchaincl/dotsql"
 )
 
 func initDotSql() (*sql.DB, *DotSql) {
@@ -17,7 +15,7 @@ func initDotSql() (*sql.DB, *DotSql) {
 		panic(err)
 	}
 
-	dotsql, err := Load("test_schema.sql")
+	dotsql, err := LoadFile("test_schema.sql")
 	if err != nil {
 		panic(err)
 	}
@@ -97,3 +95,47 @@ func TestSelect(t *testing.T) {
 		t.Errorf("Expect to find user with email == %s, got %s", "foo@bar.com", email)
 	}
 }
+
+func TestLoad(t *testing.T) {
+	dotsql1, err := LoadFile("test_schema.sql")
+	if err != nil {
+		t.Errorf("Failed to load queries from file")
+	}
+	if len(dotsql1.queries) != 3 {
+		t.Errorf("Wrong number of queries loaded from file")
+	}
+
+	dotsql2, err := LoadString(testSchemaStr)
+	if err != nil {
+		t.Errorf("Failed to load queries from string")
+	}
+	if len(dotsql2.queries) != 3 {
+		t.Errorf("Wrong number of queries loaded from string")
+	}
+
+	dotsql3, err := LoadBytes(testSchemaBytes)
+	if err != nil {
+		t.Errorf("Failed to load queries from file")
+	}
+	if len(dotsql3.queries) != 3 {
+		t.Errorf("Wrong number of queries loaded from bytes")
+	}
+}
+
+var (
+	testSchemaStr = `-- name: migrate
+CREATE TABLE users (
+	id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+	name VARCHAR(255),
+	email VARCHAR(255)
+);
+
+-- name: create-user
+INSERT INTO users (name, email) VALUES(?, ?)
+
+-- name: find-one-user-by-email
+SELECT id,name,email FROM users WHERE email = ? LIMIT 1
+`
+
+	testSchemaBytes = []byte(testSchemaStr)
+)

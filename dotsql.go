@@ -2,8 +2,10 @@ package dotsql
 
 import (
 	"bufio"
+	"bytes"
 	"database/sql"
 	"fmt"
+	"io"
 	"os"
 )
 
@@ -16,15 +18,13 @@ type Execer interface {
 }
 
 type DotSql struct {
-	filePath string
-	queries  map[string]string
+	queries map[string]string
 }
 
 func (self DotSql) lookupQuery(name string) (query string, err error) {
 	query, ok := self.queries[name]
 	if !ok {
-		err = fmt.Errorf("dotsql: '%s' could not be found on '%s'",
-			name, self.filePath)
+		err = fmt.Errorf("dotsql: '%s' could not be found", name)
 	}
 
 	return
@@ -48,22 +48,33 @@ func (self DotSql) Exec(db Execer, name string, args ...interface{}) (sql.Result
 	return db.Exec(query, args...)
 }
 
-func Load(sqlFile string) (dotsql *DotSql, err error) {
+func Load(r io.Reader) (*DotSql, error) {
+	scanner := &Scanner{}
+	queries := scanner.Run(bufio.NewScanner(r))
+
+	dotsql := &DotSql{
+		queries: queries,
+	}
+
+	return dotsql, nil
+}
+
+func LoadFile(sqlFile string) (*DotSql, error) {
 	f, err := os.Open(sqlFile)
 	if err != nil {
-		return
+		return nil, err
 	}
 	defer f.Close()
 
-	dotsql = &DotSql{
-		filePath: sqlFile,
-		queries:  scanQueries(f),
-	}
-
-	return
+	return Load(f)
 }
 
-func scanQueries(f *os.File) map[string]string {
-	scanner := &Scanner{}
-	return scanner.Run(bufio.NewScanner(f))
+func LoadString(sql string) (*DotSql, error) {
+	buf := bytes.NewBufferString(sql)
+	return Load(buf)
+}
+
+func LoadBytes(sql []byte) (*DotSql, error) {
+	buf := bytes.NewBuffer(sql)
+	return Load(buf)
 }
