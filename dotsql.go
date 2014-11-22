@@ -76,7 +76,7 @@ func (d DotSql) Exec(db Execer, name string, args ...interface{}) (sql.Result, e
 
 // Load imports sql queries from any io.Reader.
 func Load(r io.Reader) (*DotSql, error) {
-	scanner := &Scanner{}
+	scanner := &scanner{}
 	queries := scanner.Run(bufio.NewScanner(r))
 
 	dotsql := &DotSql{
