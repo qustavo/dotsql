@@ -13,7 +13,7 @@ type Preparer interface {
 	Prepare(query string) (*sql.Stmt, error)
 }
 
-type Queryer interface {
+type Querier interface {
 	Query(query string, args ...interface{}) (*sql.Rows, error)
 }
 
@@ -43,7 +43,7 @@ func (self DotSql) Prepare(db Preparer, name string) (*sql.Stmt, error) {
 	return db.Prepare(query)
 }
 
-func (self DotSql) Query(db Queryer, name string, args ...interface{}) (*sql.Rows, error) {
+func (self DotSql) Query(db Querier, name string, args ...interface{}) (*sql.Rows, error) {
 	query, err := self.lookupQuery(name)
 	if err != nil {
 		return nil, err
@@ -83,6 +83,6 @@ func LoadFromFile(sqlFile string) (*DotSql, error) {
 }
 
 func LoadFromString(sql string) (*DotSql, error) {
-       buf := bytes.NewBufferString(sql)
-       return Load(buf)
+	buf := bytes.NewBufferString(sql)
+	return Load(buf)
 }
