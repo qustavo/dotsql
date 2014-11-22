@@ -61,6 +61,10 @@ func (self DotSql) Exec(db Execer, name string, args ...interface{}) (sql.Result
 	return db.Exec(query, args...)
 }
 
+func (self DotSql) Raw(name string) (string, error) {
+	return self.lookupQuery(name)
+}
+
 func Load(r io.Reader) (*DotSql, error) {
 	scanner := &Scanner{}
 	queries := scanner.Run(bufio.NewScanner(r))

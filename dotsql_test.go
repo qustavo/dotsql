@@ -21,3 +21,18 @@ func TestLoadFromString(t *testing.T) {
 	_, err := LoadFromString("")
 	failIfError(t, err)
 }
+
+func TestRaw(t *testing.T) {
+	expectedQuery := "SELECT 1+1"
+
+	dot, err := LoadFromString("--name: my-query\n" + expectedQuery)
+	failIfError(t, err)
+
+	got, err := dot.Raw("my-query")
+	failIfError(t, err)
+
+	got = strings.TrimSpace(got)
+	if got != expectedQuery {
+		t.Errorf("Raw() == '%s', expected '%s'", got, expectedQuery)
+	}
+}
