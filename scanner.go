@@ -5,13 +5,13 @@ import (
 	"regexp"
 )
 
-type Scanner struct {
+type scanner struct {
 	line    string
 	queries map[string]string
 	current string
 }
 
-type stateFn func(*Scanner) stateFn
+type stateFn func(*scanner) stateFn
 
 func getTag(line string) string {
 	re := regexp.MustCompile("^\\s*--\\s*name:\\s*(\\S+)")
@@ -22,7 +22,7 @@ func getTag(line string) string {
 	return matches[1]
 }
 
-func initialState(s *Scanner) stateFn {
+func initialState(s *scanner) stateFn {
 	if tag := getTag(s.line); len(tag) > 0 {
 		s.current = tag
 		return queryState
@@ -30,7 +30,7 @@ func initialState(s *Scanner) stateFn {
 	return initialState
 }
 
-func queryState(s *Scanner) stateFn {
+func queryState(s *scanner) stateFn {
 	if tag := getTag(s.line); len(tag) > 0 {
 		s.current = tag
 	} else {
@@ -39,17 +39,17 @@ func queryState(s *Scanner) stateFn {
 	return queryState
 }
 
-func (self *Scanner) appendQueryLine() {
-	self.queries[self.current] = self.queries[self.current] + self.line + "\n"
+func (s *scanner) appendQueryLine() {
+	s.queries[s.current] = s.queries[s.current] + s.line + "\n"
 }
 
-func (self *Scanner) Run(io *bufio.Scanner) map[string]string {
-	self.queries = make(map[string]string)
+func (s *scanner) Run(io *bufio.Scanner) map[string]string {
+	s.queries = make(map[string]string)
 
-	for s := initialState; io.Scan(); {
-		self.line = io.Text()
-		s = s(self)
+	for state := initialState; io.Scan(); {
+		s.line = io.Text()
+		state = state(s)
 	}
 
-	return self.queries
+	return s.queries
 }

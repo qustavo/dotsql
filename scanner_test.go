@@ -37,7 +37,7 @@ func TestScannerRun(t *testing.T) {
 	INSERT INTO users (?, ?, ?)
 	`
 
-	scanner := &Scanner{}
+	scanner := &scanner{}
 	queries := scanner.Run(bufio.NewScanner(strings.NewReader(sqlFile)))
 
 	numberOfQueries := len(queries)

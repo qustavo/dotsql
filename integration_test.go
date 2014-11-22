@@ -95,3 +95,14 @@ func TestSelect(t *testing.T) {
 		t.Errorf("Expect to find user with email == %s, got %s", "foo@bar.com", email)
 	}
 }
+
+func Example(t *testing.T) {
+	db, _ := sql.Open("sqlite3", ":memory:")
+
+	// queries.sql contains:
+	// -- name: create-user
+	// INSERT INTO users (name, email) VALUES(?, ?)
+	dot, _ := LoadFromFile("queries.sql")
+
+	dot.Exec(db, "create-user", "User Name", "main@example.com")
+}
