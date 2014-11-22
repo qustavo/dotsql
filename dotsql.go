@@ -9,6 +9,10 @@ import (
 	"os"
 )
 
+type Preparer interface {
+	Prepare(query string) (*sql.Stmt, error)
+}
+
 type Queryer interface {
 	Query(query string, args ...interface{}) (*sql.Rows, error)
 }
@@ -28,6 +32,15 @@ func (self DotSql) lookupQuery(name string) (query string, err error) {
 	}
 
 	return
+}
+
+func (self DotSql) Prepare(db Preparer, name string) (*sql.Stmt, error) {
+	query, err := self.lookupQuery(name)
+	if err != nil {
+		return nil, err
+	}
+
+	return db.Prepare(query)
 }
 
 func (self DotSql) Query(db Queryer, name string, args ...interface{}) (*sql.Rows, error) {
@@ -59,7 +72,7 @@ func Load(r io.Reader) (*DotSql, error) {
 	return dotsql, nil
 }
 
-func LoadFile(sqlFile string) (*DotSql, error) {
+func LoadFromFile(sqlFile string) (*DotSql, error) {
 	f, err := os.Open(sqlFile)
 	if err != nil {
 		return nil, err
@@ -69,12 +82,7 @@ func LoadFile(sqlFile string) (*DotSql, error) {
 	return Load(f)
 }
 
-func LoadString(sql string) (*DotSql, error) {
-	buf := bytes.NewBufferString(sql)
-	return Load(buf)
-}
-
-func LoadBytes(sql []byte) (*DotSql, error) {
-	buf := bytes.NewBuffer(sql)
-	return Load(buf)
+func LoadFromString(sql string) (*DotSql, error) {
+       buf := bytes.NewBufferString(sql)
+       return Load(buf)
 }
