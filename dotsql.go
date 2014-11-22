@@ -20,8 +20,8 @@ type Preparer interface {
 	Prepare(query string) (*sql.Stmt, error)
 }
 
-// Querier is an interface used by Query.
-type Querier interface {
+// Queryer is an interface used by Query.
+type Queryer interface {
 	Query(query string, args ...interface{}) (*sql.Rows, error)
 }
 
@@ -55,7 +55,7 @@ func (d DotSql) Prepare(db Preparer, name string) (*sql.Stmt, error) {
 }
 
 // Query is a wrapper for database/sql's Query(), using dotsql named query.
-func (d DotSql) Query(db Querier, name string, args ...interface{}) (*sql.Rows, error) {
+func (d DotSql) Query(db Queryer, name string, args ...interface{}) (*sql.Rows, error) {
 	query, err := d.lookupQuery(name)
 	if err != nil {
 		return nil, err
