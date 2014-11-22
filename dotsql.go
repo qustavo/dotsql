@@ -87,6 +87,6 @@ func LoadFromFile(sqlFile string) (*DotSql, error) {
 }
 
 func LoadFromString(sql string) (*DotSql, error) {
-       buf := bytes.NewBufferString(sql)
-       return Load(buf)
+	buf := bytes.NewBufferString(sql)
+	return Load(buf)
 }
