@@ -46,7 +46,7 @@ Then you should be able to run something like:
 db, err := sql.Open("sqlite3", ":memory:")
 
 // Loads queries from file
-dot, err := dotsql.Load("queries.sql")
+dot, err := dotsql.LoadFromFile("queries.sql")
 
 // Run queries
 res, err := dot.Exec(db, "create-users-table")
