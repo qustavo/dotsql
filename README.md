@@ -16,7 +16,7 @@ $ go get github.com/gchaincl/dotsql
 ```
 Make sure Git is installed on your machine and in your system's `$PATH`
 
-Usage
+Usage [![GoDoc](https://godoc.org/github.com/gchaincl/dotsql?status.svg)](https://godoc.org/github.com/gchaincl/dotsql)
 --
 
 First of all, you need to define queries into a file:
@@ -59,7 +59,7 @@ result, err := stmt.Exec()
 
 For a complete example please refer to [integration_test.go](https://github.com/gchaincl/dotsql/blob/master/integration_test.go) and [test_schema.sql](https://github.com/gchaincl/dotsql/blob/master/test_schema.sql)
 
-Development [![GoDoc](https://godoc.org/github.com/gchaincl/dotsql?status.svg)](https://godoc.org/github.com/gchaincl/dotsql)
+Development
 --
 
 Dotsql is in a very early stage so api may change. Contributions are welcome!
