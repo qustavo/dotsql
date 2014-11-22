@@ -39,17 +39,17 @@ func queryState(s *Scanner) stateFn {
 	return queryState
 }
 
-func (self *Scanner) appendQueryLine() {
-	self.queries[self.current] = self.queries[self.current] + self.line + "\n"
+func (s *Scanner) appendQueryLine() {
+	s.queries[s.current] = s.queries[s.current] + s.line + "\n"
 }
 
-func (self *Scanner) Run(io *bufio.Scanner) map[string]string {
-	self.queries = make(map[string]string)
+func (s *Scanner) Run(io *bufio.Scanner) map[string]string {
+	s.queries = make(map[string]string)
 
-	for s := initialState; io.Scan(); {
-		self.line = io.Text()
-		s = s(self)
+	for state := initialState; io.Scan(); {
+		s.line = io.Text()
+		state = state(s)
 	}
 
-	return self.queries
+	return s.queries
 }
