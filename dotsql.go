@@ -25,8 +25,8 @@ type DotSql struct {
 	queries map[string]string
 }
 
-func (self DotSql) lookupQuery(name string) (query string, err error) {
-	query, ok := self.queries[name]
+func (d DotSql) lookupQuery(name string) (query string, err error) {
+	query, ok := d.queries[name]
 	if !ok {
 		err = fmt.Errorf("dotsql: '%s' could not be found", name)
 	}
@@ -34,8 +34,8 @@ func (self DotSql) lookupQuery(name string) (query string, err error) {
 	return
 }
 
-func (self DotSql) Prepare(db Preparer, name string) (*sql.Stmt, error) {
-	query, err := self.lookupQuery(name)
+func (d DotSql) Prepare(db Preparer, name string) (*sql.Stmt, error) {
+	query, err := d.lookupQuery(name)
 	if err != nil {
 		return nil, err
 	}
@@ -43,8 +43,8 @@ func (self DotSql) Prepare(db Preparer, name string) (*sql.Stmt, error) {
 	return db.Prepare(query)
 }
 
-func (self DotSql) Query(db Queryer, name string, args ...interface{}) (*sql.Rows, error) {
-	query, err := self.lookupQuery(name)
+func (d DotSql) Query(db Queryer, name string, args ...interface{}) (*sql.Rows, error) {
+	query, err := d.lookupQuery(name)
 	if err != nil {
 		return nil, err
 	}
@@ -52,8 +52,8 @@ func (self DotSql) Query(db Queryer, name string, args ...interface{}) (*sql.Row
 	return db.Query(query, args...)
 }
 
-func (self DotSql) Exec(db Execer, name string, args ...interface{}) (sql.Result, error) {
-	query, err := self.lookupQuery(name)
+func (d DotSql) Exec(db Execer, name string, args ...interface{}) (sql.Result, error) {
+	query, err := d.lookupQuery(name)
 	if err != nil {
 		return nil, err
 	}
@@ -61,8 +61,8 @@ func (self DotSql) Exec(db Execer, name string, args ...interface{}) (sql.Result
 	return db.Exec(query, args...)
 }
 
-func (self DotSql) Raw(name string) (string, error) {
-	return self.lookupQuery(name)
+func (d DotSql) Raw(name string) (string, error) {
+	return d.lookupQuery(name)
 }
 
 func Load(r io.Reader) (*DotSql, error) {
