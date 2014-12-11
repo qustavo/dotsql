@@ -79,6 +79,11 @@ func (d DotSql) Raw(name string) (string, error) {
 	return d.lookupQuery(name)
 }
 
+// QueryMap returns a map[string]string of loaded queries
+func (d DotSql) QueryMap() map[string]string {
+	return d.queries
+}
+
 // Load imports sql queries from any io.Reader.
 func Load(r io.Reader) (*DotSql, error) {
 	scanner := &Scanner{}

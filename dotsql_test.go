@@ -2,7 +2,6 @@ package dotsql
 
 import (
 	"strings"
-
 	"testing"
 )
 
@@ -34,5 +33,33 @@ func TestRaw(t *testing.T) {
 	got = strings.TrimSpace(got)
 	if got != expectedQuery {
 		t.Errorf("Raw() == '%s', expected '%s'", got, expectedQuery)
+	}
+}
+
+func TestQueries(t *testing.T) {
+	expectedQueryMap := map[string]string{
+		"select": "SELECT * from users",
+		"insert": "INSERT INTO users (?, ?, ?)",
+	}
+
+	dot, err := LoadFromString(`
+	-- name: select
+	SELECT * from users
+
+	-- name: insert
+	INSERT INTO users (?, ?, ?)
+	`)
+	failIfError(t, err)
+
+	got := dot.QueryMap()
+
+	if len(got) != len(expectedQueryMap) {
+		t.Errorf("QueryMap() len (%d) differ from expected (%d)", len(got), len(expectedQueryMap))
+	}
+
+	for name, query := range got {
+		if query != expectedQueryMap[name] {
+			t.Errorf("QueryMap()[%s] == '%s', expected '%s'", query, expectedQueryMap[name])
+		}
 	}
 }

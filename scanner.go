@@ -3,6 +3,7 @@ package dotsql
 import (
 	"bufio"
 	"regexp"
+	"strings"
 )
 
 type Scanner struct {
@@ -40,7 +41,18 @@ func queryState(s *Scanner) stateFn {
 }
 
 func (s *Scanner) appendQueryLine() {
-	s.queries[s.current] = s.queries[s.current] + s.line + "\n"
+	current := s.queries[s.current]
+	line := strings.Trim(s.line, " \t")
+	if len(line) == 0 {
+		return
+	}
+
+	if len(current) > 0 {
+		current = current + "\n"
+	}
+
+	current = current + line
+	s.queries[s.current] = current
 }
 
 func (s *Scanner) Run(io *bufio.Scanner) map[string]string {
