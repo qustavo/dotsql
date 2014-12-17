@@ -67,6 +67,7 @@ Integration tests are tagged with `+integration`, so if you want to run them you
 ```bash
 go test -tags=integration
 ```
+_If  integration tests takes too long remember to_ `go install code.google.com/p/go-sqlite/go1/sqlite3`
 
 Otherwise just run:
 ```bash
