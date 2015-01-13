@@ -63,3 +63,43 @@ func TestQueries(t *testing.T) {
 		}
 	}
 }
+
+func TestMergeHaveBothQueries(t *testing.T) {
+	expectedQueryMap := map[string]string{
+		"query-a": "SELECT * FROM a",
+		"query-b": "SELECT * FROM b",
+	}
+
+	a, err := LoadFromString("--name: query-a\nSELECT * FROM a")
+	failIfError(t, err)
+
+	b, err := LoadFromString("--name: query-b\nSELECT * FROM b")
+	failIfError(t, err)
+
+	c := Merge(a, b)
+
+	got := c.QueryMap()
+	if len(got) != len(expectedQueryMap) {
+		t.Errorf("QueryMap() len (%d) differ from expected (%d)", len(got), len(expectedQueryMap))
+	}
+}
+
+func TestMergeTakesPresecendeFromLastArgument(t *testing.T) {
+	expectedQuery := "SELECT * FROM c"
+
+	a, err := LoadFromString("--name: query\nSELECT * FROM a")
+	failIfError(t, err)
+
+	b, err := LoadFromString("--name: query\nSELECT * FROM b")
+	failIfError(t, err)
+
+	c, err := LoadFromString("--name: query\nSELECT * FROM c")
+	failIfError(t, err)
+
+	x := Merge(a, b, c)
+
+	got := x.QueryMap()["query"]
+	if expectedQuery != got {
+		t.Errorf("Expected query: '%s', got: '%s'", expectedQuery, got)
+	}
+}

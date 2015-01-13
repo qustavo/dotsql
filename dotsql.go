@@ -112,3 +112,20 @@ func LoadFromString(sql string) (*DotSql, error) {
 	buf := bytes.NewBufferString(sql)
 	return Load(buf)
 }
+
+// Merge takes one or more *DotSql and merge its queries
+// It's in-order, so the last source will override queries with the same name
+// in the previous arguments if any.
+func Merge(dots ...*DotSql) *DotSql {
+	queries := make(map[string]string)
+
+	for _, dot := range dots {
+		for k, v := range dot.QueryMap() {
+			queries[k] = v
+		}
+	}
+
+	return &DotSql{
+		queries: queries,
+	}
+}
