@@ -73,3 +73,9 @@ Otherwise just run:
 ```bash
 go test
 ```
+
+TODO
+----
+
+- [ ] Enable text interpolation inside queries using `text/template`
+- [ ] `sqlx` integration
