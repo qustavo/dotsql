@@ -79,3 +79,4 @@ TODO
 
 - [ ] Enable text interpolation inside queries using `text/template`
 - [ ] `sqlx` integration
+- [ ] `go.rice` / `go-bindata` integration
