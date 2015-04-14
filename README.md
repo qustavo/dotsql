@@ -74,9 +74,12 @@ Otherwise just run:
 go test
 ```
 
+Embeding
+--
+To avoid distributing `sql` files with the binary, you will need to embed into it, tools like [gotic](https://github.com/gchaincl/gotic) may help
+
 TODO
 ----
 
 - [ ] Enable text interpolation inside queries using `text/template`
 - [ ] `sqlx` integration
-- [ ] `go.rice` / `go-bindata` integration
