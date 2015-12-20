@@ -2,6 +2,7 @@ package dotsql_test
 
 import (
 	"database/sql"
+
 	"github.com/gchaincl/dotsql"
 )
 
@@ -33,4 +34,12 @@ func ExampleLoadFromFile() {
 		panic(err)
 	}
 	defer rows.Close()
+
+	row, err := dot.QueryRow(db, "find-user-by-email", "user@example.com")
+	if err != nil {
+		panic(err)
+	}
+
+	var email string
+	row.Scan(&email)
 }

@@ -25,6 +25,11 @@ type Queryer interface {
 	Query(query string, args ...interface{}) (*sql.Rows, error)
 }
 
+// QueryRower is an interface used by QueryRow
+type QueryRower interface {
+	QueryRow(query string, args ...interface{}) *sql.Row
+}
+
 // Execer is an interface used by Exec.
 type Execer interface {
 	Exec(query string, args ...interface{}) (sql.Result, error)
@@ -62,6 +67,16 @@ func (d DotSql) Query(db Queryer, name string, args ...interface{}) (*sql.Rows, 
 	}
 
 	return db.Query(query, args...)
+}
+
+// QueryRow is a wrapper for database/sql's QueryRow(), using dotsql named query.
+func (d DotSql) QueryRow(db QueryRower, name string, args ...interface{}) (*sql.Row, error) {
+	query, err := d.lookupQuery(name)
+	if err != nil {
+		return nil, err
+	}
+
+	return db.QueryRow(query, args...), nil
 }
 
 // Exec is a wrapper for database/sql's Exec(), using dotsql named query.

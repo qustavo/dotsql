@@ -95,3 +95,30 @@ func TestSelect(t *testing.T) {
 		t.Errorf("Expect to find user with email == %s, got %s", "foo@bar.com", email)
 	}
 }
+
+func TestSelectOne(t *testing.T) {
+	db, dotsql := initDotSql()
+	defer db.Close()
+
+	_, err := db.Exec("INSERT INTO users(email) VALUES('foo@bar.com')")
+	if err != nil {
+		panic(err)
+	}
+
+	row, err := dotsql.QueryRow(db, "find-one-user-by-email", "foo@bar.com")
+	if err != nil {
+		panic(err)
+	}
+
+	var id, name interface{}
+	var email string
+	err = row.Scan(&id, &name, &email)
+
+	if err != nil {
+		t.Errorf("User with email 'foo@bar.com' cound not be found")
+	}
+
+	if email != "foo@bar.com" {
+		t.Errorf("Expect to find user with email == %s, got %s", "foo@bar.com", email)
+	}
+}

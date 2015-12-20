@@ -30,6 +30,8 @@ email VARCHAR(255)
 );
 -- name: create-user
 INSERT INTO users (name, email) VALUES(?, ?)
+-- name: find-users-by-email
+SELECT id,name,email FROM users WHERE email = ?
 -- name: find-one-user-by-email
 SELECT id,name,email FROM users WHERE email = ? LIMIT 1
 --name: drop-users-table
@@ -51,7 +53,8 @@ dot, err := dotsql.LoadFromFile("queries.sql")
 // Run queries
 res, err := dot.Exec(db, "create-users-table")
 res, err := dot.Exec(db, "create-user", "User Name", "main@example.com")
-rows, err := dot.Query(db, "find-one-user-by-email", "main@example.com")
+rows, err := dot.Query(db, "find-users-by-email", "main@example.com")
+row, err := dot.QueryRow(db, "find-one-user-by-email", "user@example.com")
 
 stmt, err := dot.Prepare(db, "drop-users-table")
 result, err := stmt.Exec()
