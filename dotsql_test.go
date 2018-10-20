@@ -59,7 +59,7 @@ func TestQueries(t *testing.T) {
 
 	for name, query := range got {
 		if query != expectedQueryMap[name] {
-			t.Errorf("QueryMap()[%s] == '%s', expected '%s'", query, expectedQueryMap[name])
+			t.Errorf("QueryMap()[%s] == '%s', expected '%s'", name, query, expectedQueryMap[name])
 		}
 	}
 }
