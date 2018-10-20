@@ -1,4 +1,4 @@
-// +build integration
+// +build integrationwithsqlite
 
 package dotsql
 

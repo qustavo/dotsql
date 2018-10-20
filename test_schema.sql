@@ -13,3 +13,6 @@ SELECT id,name,email FROM users WHERE email = ? LIMIT 1
 
 -- name: drop-users-table
 DROP TABLE users
+
+-- name: get-user-list
+SELECT id,name,email FROM users

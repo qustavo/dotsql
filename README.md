@@ -72,7 +72,7 @@ Development
 Dotsql is in a very early stage so api may change. Contributions are welcome!
 Integration tests are tagged with `+integration`, so if you want to run them you should:
 ```bash
-go test -tags=integration
+go test -tags=integrationwithsqlite
 ```
 _If  integration tests takes too long remember to_ `go install github.com/mxk/go-sqlite/sqlite3`
 
