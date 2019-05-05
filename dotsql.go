@@ -111,6 +111,24 @@ func Load(r io.Reader) (*DotSql, error) {
 	return dotsql, nil
 }
 
+// LoadSize imports sql queries from any io.Reader and use maxSize.
+func LoadSize(r io.Reader, maxSize int) (*DotSql, error) {
+	if maxSize < bufio.MaxScanTokenSize {
+		maxSize = bufio.MaxScanTokenSize
+	}
+	// ref: bufio.Scan_test.go func TestHugeBuffer(t *testing.T)
+	hugeBuffer := bufio.NewScanner(bufio.NewReader(r))
+	hugeBuffer.Buffer(make([]byte, 4096), maxSize)
+	scanner := &Scanner{}
+	queries := scanner.Run(hugeBuffer)
+
+	dotsql := &DotSql{
+		queries: queries,
+	}
+
+	return dotsql, nil
+}
+
 // LoadFromFile imports SQL queries from the file.
 func LoadFromFile(sqlFile string) (*DotSql, error) {
 	f, err := os.Open(sqlFile)
@@ -120,6 +138,17 @@ func LoadFromFile(sqlFile string) (*DotSql, error) {
 	defer f.Close()
 
 	return Load(f)
+}
+
+// LoadFromFileSize imports SQL queries from the file and use maxSize.
+func LoadFromFileSize(sqlFile string, maxSize int) (*DotSql, error) {
+	f, err := os.Open(sqlFile)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	return LoadSize(f, maxSize)
 }
 
 // LoadFromString imports SQL queries from the string.
