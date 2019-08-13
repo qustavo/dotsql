@@ -74,9 +74,7 @@ func TestPrepare(t *testing.T) {
 		t.Error("stmt expected to be non-nil, got nil")
 	}
 
-	if err != nil {
-		t.Error("err expected to be nil, got non-nil")
-	}
+	failIfError(t, err)
 
 	ff = p.PrepareCalls()
 	if len(ff) != 1 {
@@ -149,9 +147,7 @@ func TestPrepareContext(t *testing.T) {
 		t.Error("stmt expected to be non-nil, got nil")
 	}
 
-	if err != nil {
-		t.Error("err expected to be nil, got non-nil")
-	}
+	failIfError(t, err)
 
 	ff = p.PrepareContextCalls()
 	if len(ff) != 1 {
@@ -228,9 +224,7 @@ func TestQuery(t *testing.T) {
 		t.Error("rows expected to be non-nil, got nil")
 	}
 
-	if err != nil {
-		t.Error("err expected to be nil, got non-nil")
-	}
+	failIfError(t, err)
 
 	ff = q.QueryCalls()
 	if len(ff) != 1 {
@@ -312,9 +306,7 @@ func TestQueryContext(t *testing.T) {
 		t.Error("rows expected to be non-nil, got nil")
 	}
 
-	if err != nil {
-		t.Error("err expected to be nil, got non-nil")
-	}
+	failIfError(t, err)
 
 	ff = q.QueryContextCalls()
 	if len(ff) != 1 {
@@ -558,9 +550,7 @@ func TestExec(t *testing.T) {
 		t.Error("result expected to be non-nil, got nil")
 	}
 
-	if err != nil {
-		t.Error("err expected to be nil, got non-nil")
-	}
+	failIfError(t, err)
 
 	ff = q.ExecCalls()
 	if len(ff) != 1 {
@@ -642,9 +632,7 @@ func TestExecContext(t *testing.T) {
 		t.Error("result expected to be non-nil, got nil")
 	}
 
-	if err != nil {
-		t.Error("err expected to be nil, got non-nil")
-	}
+	failIfError(t, err)
 
 	ff = q.ExecContextCalls()
 	if len(ff) != 1 {
@@ -663,6 +651,24 @@ func TestExecContext(t *testing.T) {
 func TestLoad(t *testing.T) {
 	_, err := Load(strings.NewReader(""))
 	failIfError(t, err)
+}
+
+func TestLoadFromFile(t *testing.T) {
+	dot, err := LoadFromFile("./non-existent.sql")
+	if err == nil {
+		t.Error("error expected to be non-nil, got nil")
+	}
+
+	if dot != nil {
+		t.Error("dotsql instance expected to be nil, got non-nil")
+	}
+
+	dot, err = LoadFromFile("./test_schema.sql")
+	failIfError(t, err)
+
+	if dot == nil {
+		t.Error("dotsql instance expected to be non-nil, got nil")
+	}
 }
 
 func TestLoadFromString(t *testing.T) {
