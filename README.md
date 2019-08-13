@@ -1,4 +1,8 @@
-dotsql [![Build Status](https://travis-ci.org/gchaincl/dotsql.svg)](https://travis-ci.org/gchaincl/dotsql)
+dotsql 
+[![GoDoc](https://godoc.org/github.com/gchaincl/dotsql?status.svg)](https://godoc.org/github.com/gchaincl/dotsql)
+[![Build Status](https://travis-ci.org/gchaincl/dotsql.svg)](https://travis-ci.org/gchaincl/dotsql)
+[![Test coverage](http://gocover.io/_badge/github.com/gchaincl/dotsql)](https://gocover.io/github.com/gchaincl/dotsql)
+[![Go Report Card](https://goreportcard.com/badge/github.com/gchaincl/dotsql)](https://goreportcard.com/report/github.com/gchaincl/dotsql)
 ======
 
 A Golang library for using SQL.
@@ -10,16 +14,14 @@ _Dotsql is heavily inspired by_ [yesql](https://github.com/krisajenkins/yesql).
 
 Installation
 --
-Simple install the package to your `$GOPATH` with the `go` tool from shell:
 ```bash
 $ go get github.com/gchaincl/dotsql
 ```
-Make sure Git is installed on your machine and in your system's `$PATH`
 
-Usage [![GoDoc](https://godoc.org/github.com/gchaincl/dotsql?status.svg)](https://godoc.org/github.com/gchaincl/dotsql)
+Usage 
 --
 
-First of all, you need to define queries into a file:
+First of all, you need to define queries inside your sql file:
 
 ```sql
 -- name: create-users-table
@@ -43,9 +45,10 @@ DROP TABLE users
 ```
 
 Notice that every query has a name tag (`--name:<some name>`),
-this will be helpful for referring to a specific query
+this is needed to be able to uniquely identify each query
+inside dotsql.
 
-Then you should be able to run something like:
+With your sql file prepared, you can load it up and start utilizing your queries:
 
 ```go
 // Get a database handle
@@ -64,29 +67,19 @@ stmt, err := dot.Prepare(db, "drop-users-table")
 result, err := stmt.Exec()
 ```
 
-For a complete example please refer to [integration_test.go](https://github.com/gchaincl/dotsql/blob/master/integration_test.go) and [test_schema.sql](https://github.com/gchaincl/dotsql/blob/master/test_schema.sql)
-
-Development
---
-
-Dotsql is in a very early stage so api may change. Contributions are welcome!
-Integration tests are tagged with `+integration`, so if you want to run them you should:
-```bash
-go test -tags=integration
-```
-_If  integration tests takes too long remember to_ `go install github.com/mxk/go-sqlite/sqlite3`
-
-Otherwise just run:
-```bash
-go test
+You can also merge multiple dotsql instances created from different sql file inputs:
+```go
+dot1, err := dotsql.LoadFromFile("queries1.sql")
+dot2, err := dotsql.LoadFromFile("queries2.sql")
+dot := dotsql.Merge(dot1, dot2)
 ```
 
 Embeding
 --
-To avoid distributing `sql` files with the binary, you will need to embed into it, tools like [gotic](https://github.com/gchaincl/gotic) may help
+To avoid distributing `sql` files alongside the binary file, you will need to use tools like 
+[gotic](https://github.com/gchaincl/gotic) to embed / pack everything into one file.
 
 TODO
-----
-
+--
 - [ ] Enable text interpolation inside queries using `text/template`
 - [ ] `sqlx` integration
