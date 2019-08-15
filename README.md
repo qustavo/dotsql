@@ -1,7 +1,7 @@
 dotsql 
 [![GoDoc](https://godoc.org/github.com/gchaincl/dotsql?status.svg)](https://godoc.org/github.com/gchaincl/dotsql)
 [![Build Status](https://travis-ci.org/gchaincl/dotsql.svg)](https://travis-ci.org/gchaincl/dotsql)
-[![Test coverage](http://gocover.io/_badge/github.com/gchaincl/dotsql)](https://gocover.io/github.com/gchaincl/dotsql)
+[![Test coverage](https://gocover.io/_badge/github.com/gchaincl/dotsql)](https://gocover.io/github.com/gchaincl/dotsql)
 [![Go Report Card](https://goreportcard.com/badge/github.com/gchaincl/dotsql)](https://goreportcard.com/report/github.com/gchaincl/dotsql)
 ======
 
