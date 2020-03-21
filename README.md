@@ -82,4 +82,6 @@ To avoid distributing `sql` files alongside the binary file, you will need to us
 TODO
 --
 - [ ] Enable text interpolation inside queries using `text/template`
-- [ ] `sqlx` integration
+
+
+For [sqlx](https://github.com/jmoiron/sqlx) support check [dotsqlx](https://github.com/swithek/dotsqlx)
