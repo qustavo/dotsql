@@ -84,4 +84,6 @@ TODO
 - [ ] Enable text interpolation inside queries using `text/template`
 
 
+SQLX
+--
 For [sqlx](https://github.com/jmoiron/sqlx) support check [dotsqlx](https://github.com/swithek/dotsqlx)
