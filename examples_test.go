@@ -49,7 +49,7 @@ func ExampleLoadFromFile() {
 	}
 
 	// Query
-	rows, err := dot.Query(db, "find-user-by-email", "user@example.com")
+	rows, err := dot.Query(db, "find-users-by-email", "user@example.com")
 	if err != nil {
 		panic(err)
 	}
