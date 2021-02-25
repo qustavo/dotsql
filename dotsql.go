@@ -13,7 +13,10 @@ import (
 	"database/sql"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
+	"path/filepath"
+	"strings"
 )
 
 // Preparer is an interface used by Prepare.
@@ -204,4 +207,38 @@ func Merge(dots ...*DotSql) *DotSql {
 	return &DotSql{
 		queries: queries,
 	}
+}
+
+// LoadFromDir reads the directory then loads all ".sql" files and uses file names (without ".sql") as query names
+func LoadFromDir(dirPath string, recuresive bool) (dotsql *DotSql, err error) {
+	files, err := ioutil.ReadDir(dirPath)
+	if err != nil {
+		return
+	}
+	queries := make(map[string]string)
+	var fileData []byte
+	for _, info := range files {
+		if info.IsDir() || filepath.Ext(info.Name()) != ".sql" {
+			continue
+		}
+		fileData, err = ioutil.ReadFile(filepath.Join(dirPath, info.Name()))
+		if err != nil {
+			return
+		}
+		queries[fileNameWithoutExtension(info.Name())] = string(fileData)
+	}
+
+	if len(queries) == 0 {
+		err = fmt.Errorf("dotsql: no \".sql\" found at %q", dirPath)
+		return
+	}
+	dotsql = &DotSql{
+		queries: queries,
+	}
+	return dotsql, nil
+}
+
+func fileNameWithoutExtension(fileName string) string {
+	fileName = filepath.Base(fileName)
+	return fileName[:len(fileName)-len(filepath.Ext(fileName))]
 }
