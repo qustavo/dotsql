@@ -11,6 +11,7 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -240,4 +241,48 @@ func LoadFromDir(dirPath string, recuresive bool) (dotsql *DotSql, err error) {
 func fileNameWithoutExtension(fileName string) string {
 	fileName = filepath.Base(fileName)
 	return fileName[:len(fileName)-len(filepath.Ext(fileName))]
+}
+
+//PrepareAllContext prepares all queries and return a map[queryName]*prepareStmt.
+//in case of error closes all prepared queries.
+//if there is no query to prepare returns nil,ErrEmptyQueryMap.
+func (d DotSql) PrepareAllContext(ctx context.Context, db PreparerContext) (pStmts preparedStmts, err error) {
+	pStmts = make(preparedStmts)
+	defer func() {
+		if err != nil {
+			ForceCloseAllStmts(pStmts)
+		}
+		recovered := recover()
+		if recovered != nil {
+			ForceCloseAllStmts(pStmts)
+			panic(recovered)
+		}
+	}()
+	for queryName := range d.queries {
+		pStmts[queryName], err = d.PrepareContext(ctx, db, queryName)
+		if err != nil {
+			return
+		}
+	}
+	if len(pStmts) == 0 {
+		err = ErrEmptyQueryMap
+		pStmts = nil
+		return
+	}
+	return
+}
+
+//ErrEmptyQueryMap describes the loaded query map is empty
+var ErrEmptyQueryMap = errors.New("dotsql: empty query map")
+
+//preparedStmts stores all prepared queries
+type preparedStmts = map[string]*sql.Stmt
+
+//ForceCloseAllStmts closes all stmts of map
+func ForceCloseAllStmts(pstmt preparedStmts) {
+	for _, stmt := range pstmt {
+		if stmt != nil {
+			stmt.Close()
+		}
+	}
 }
