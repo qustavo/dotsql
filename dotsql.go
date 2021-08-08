@@ -3,7 +3,7 @@
 // It is not an ORM, it is not a query builder.
 // Dotsql is a library that helps you keep sql files in one place and use it with ease.
 //
-// For more usage examples see https://github.com/gchaincl/dotsql
+// For more usage examples see https://github.com/qustavo/dotsql
 package dotsql
 
 import (

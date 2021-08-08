@@ -1,8 +1,8 @@
 dotsql 
-[![GoDoc](https://godoc.org/github.com/gchaincl/dotsql?status.svg)](https://godoc.org/github.com/gchaincl/dotsql)
-[![Build Status](https://travis-ci.org/gchaincl/dotsql.svg)](https://travis-ci.org/gchaincl/dotsql)
-[![Test coverage](https://gocover.io/_badge/github.com/gchaincl/dotsql)](https://gocover.io/github.com/gchaincl/dotsql)
-[![Go Report Card](https://goreportcard.com/badge/github.com/gchaincl/dotsql)](https://goreportcard.com/report/github.com/gchaincl/dotsql)
+[![GoDoc](https://godoc.org/github.com/qustavo/dotsql?status.svg)](https://godoc.org/github.com/qustavo/dotsql)
+[![Build Status](https://travis-ci.org/qustavo/dotsql.svg)](https://travis-ci.org/qustavo/dotsql)
+[![Test coverage](https://gocover.io/_badge/github.com/qustavo/dotsql)](https://gocover.io/github.com/qustavo/dotsql)
+[![Go Report Card](https://goreportcard.com/badge/github.com/qustavo/dotsql)](https://goreportcard.com/report/github.com/qustavo/dotsql)
 ======
 
 A Golang library for using SQL.
@@ -15,7 +15,7 @@ _Dotsql is heavily inspired by_ [yesql](https://github.com/krisajenkins/yesql).
 Installation
 --
 ```bash
-$ go get github.com/gchaincl/dotsql
+$ go get github.com/qustavo/dotsql
 ```
 
 Usage 
@@ -77,7 +77,7 @@ dot := dotsql.Merge(dot1, dot2)
 Embeding
 --
 To avoid distributing `sql` files alongside the binary file, you will need to use tools like 
-[gotic](https://github.com/gchaincl/gotic) to embed / pack everything into one file.
+[gotic](https://github.com/qustavo/gotic) to embed / pack everything into one file.
 
 TODO
 --
