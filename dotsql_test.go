@@ -1,6 +1,7 @@
 package dotsql
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"errors"
@@ -16,10 +17,38 @@ func failIfError(t *testing.T, err error) {
 	}
 }
 
+func createTemplate(t *testing.T, content string) *template.Template {
+	t.Helper()
+	tmpl, err := template.New("get-users").Parse(content)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return tmpl
+}
+
+func extractTemplate(t *testing.T, dot DotSql, name string) string {
+	t.Helper()
+	query, err := dot.Raw(name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return query
+}
+
+func executeTemplate(t *testing.T, tmpl *template.Template) string {
+	t.Helper()
+	buffer := bytes.NewBufferString("")
+	err := tmpl.Execute(buffer, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return buffer.String()
+}
+
 func TestPrepare(t *testing.T) {
 	dot := DotSql{
-		queries: map[string]string{
-			"select": "SELECT * from users",
+		queries: map[string]*template.Template{
+			"select": createTemplate(t, "SELECT * from users"),
 		},
 	}
 
@@ -62,10 +91,11 @@ func TestPrepare(t *testing.T) {
 	}
 
 	ff = p.PrepareCalls()
+	tmpl := extractTemplate(t, dot, "select")
 	if len(ff) != 1 {
 		t.Errorf("prepare was expected to be called only once, but was called %d times", len(ff))
-	} else if ff[0].Query != dot.queries["select"] {
-		t.Errorf("prepare was expected to be called with %q query, got %q", dot.queries["select"], ff[0].Query)
+	} else if ff[0].Query != tmpl {
+		t.Errorf("prepare was expected to be called with %q query, got %q", tmpl, ff[0].Query)
 	}
 
 	// successful query preparation
@@ -80,15 +110,15 @@ func TestPrepare(t *testing.T) {
 	ff = p.PrepareCalls()
 	if len(ff) != 1 {
 		t.Errorf("prepare was expected to be called only once, but was called %d times", len(ff))
-	} else if ff[0].Query != dot.queries["select"] {
-		t.Errorf("prepare was expected to be called with %q query, got %q", dot.queries["select"], ff[0].Query)
+	} else if ff[0].Query != tmpl {
+		t.Errorf("prepare was expected to be called with %q query, got %q", tmpl, ff[0].Query)
 	}
 }
 
 func TestPrepareContext(t *testing.T) {
 	dot := DotSql{
-		queries: map[string]string{
-			"select": "SELECT * from users",
+		queries: map[string]*template.Template{
+			"select": createTemplate(t, "SELECT * from users"),
 		},
 	}
 
@@ -133,10 +163,11 @@ func TestPrepareContext(t *testing.T) {
 	}
 
 	ff = p.PrepareContextCalls()
+	tmpl := extractTemplate(t, dot, "select")
 	if len(ff) != 1 {
 		t.Errorf("prepare was expected to be called only once, but was called %d times", len(ff))
-	} else if ff[0].Query != dot.queries["select"] {
-		t.Errorf("prepare was expected to be called with %q query, got %q", dot.queries["select"], ff[0].Query)
+	} else if ff[0].Query != tmpl {
+		t.Errorf("prepare was expected to be called with %q query, got %q", tmpl, ff[0].Query)
 	} else if !reflect.DeepEqual(ff[0].Ctx, ctx) {
 		t.Errorf("prepare context does not match")
 	}
@@ -153,8 +184,8 @@ func TestPrepareContext(t *testing.T) {
 	ff = p.PrepareContextCalls()
 	if len(ff) != 1 {
 		t.Errorf("prepare was expected to be called only once, but was called %d times", len(ff))
-	} else if ff[0].Query != dot.queries["select"] {
-		t.Errorf("prepare was expected to be called with %q query, got %q", dot.queries["select"], ff[0].Query)
+	} else if ff[0].Query != tmpl {
+		t.Errorf("prepare was expected to be called with %q query, got %q", tmpl, ff[0].Query)
 	} else if !reflect.DeepEqual(ff[0].Ctx, ctx) {
 		t.Errorf("prepare context does not match")
 	}
@@ -162,8 +193,8 @@ func TestPrepareContext(t *testing.T) {
 
 func TestQuery(t *testing.T) {
 	dot := DotSql{
-		queries: map[string]string{
-			"select": "SELECT * from users WHERE name = ?",
+		queries: map[string]*template.Template{
+			"select": createTemplate(t, "SELECT * from users WHERE name = ?"),
 		},
 	}
 
@@ -208,10 +239,11 @@ func TestQuery(t *testing.T) {
 	}
 
 	ff = q.QueryCalls()
+	tmpl := extractTemplate(t, dot, "select")
 	if len(ff) != 1 {
 		t.Errorf("query was expected to be called only once, but was called %d times", len(ff))
-	} else if ff[0].Query != dot.queries["select"] {
-		t.Errorf("query was expected to be called with %q query, got %q", dot.queries["select"], ff[0].Query)
+	} else if ff[0].Query != tmpl {
+		t.Errorf("query was expected to be called with %q query, got %q", tmpl, ff[0].Query)
 	} else if len(ff[0].Args) != 1 {
 		t.Errorf("query was expected to be called with 1 argument, got %d", len(ff[0].Args))
 	} else if !reflect.DeepEqual(ff[0].Args[0], arg) {
@@ -230,8 +262,8 @@ func TestQuery(t *testing.T) {
 	ff = q.QueryCalls()
 	if len(ff) != 1 {
 		t.Errorf("query was expected to be called only once, but was called %d times", len(ff))
-	} else if ff[0].Query != dot.queries["select"] {
-		t.Errorf("query was expected to be called with %q query, got %q", dot.queries["select"], ff[0].Query)
+	} else if ff[0].Query != tmpl {
+		t.Errorf("query was expected to be called with %q query, got %q", tmpl, ff[0].Query)
 	} else if len(ff[0].Args) != 1 {
 		t.Errorf("query was expected to be called with 1 argument, got %d", len(ff[0].Args))
 	} else if !reflect.DeepEqual(ff[0].Args[0], arg) {
@@ -241,8 +273,8 @@ func TestQuery(t *testing.T) {
 
 func TestQueryContext(t *testing.T) {
 	dot := DotSql{
-		queries: map[string]string{
-			"select": "SELECT * from users WHERE name = ?",
+		queries: map[string]*template.Template{
+			"select": createTemplate(t, "SELECT * from users WHERE name = ?"),
 		},
 	}
 
@@ -288,10 +320,11 @@ func TestQueryContext(t *testing.T) {
 	}
 
 	ff = q.QueryContextCalls()
+	tmpl := extractTemplate(t, dot, "select")
 	if len(ff) != 1 {
 		t.Errorf("query was expected to be called only once, but was called %d times", len(ff))
-	} else if ff[0].Query != dot.queries["select"] {
-		t.Errorf("query was expected to be called with %q query, got %q", dot.queries["select"], ff[0].Query)
+	} else if ff[0].Query != tmpl {
+		t.Errorf("query was expected to be called with %q query, got %q", tmpl, ff[0].Query)
 	} else if len(ff[0].Args) != 1 {
 		t.Errorf("query was expected to be called with 1 argument, got %d", len(ff[0].Args))
 	} else if !reflect.DeepEqual(ff[0].Args[0], arg) {
@@ -312,8 +345,8 @@ func TestQueryContext(t *testing.T) {
 	ff = q.QueryContextCalls()
 	if len(ff) != 1 {
 		t.Errorf("query was expected to be called only once, but was called %d times", len(ff))
-	} else if ff[0].Query != dot.queries["select"] {
-		t.Errorf("query was expected to be called with %q query, got %q", dot.queries["select"], ff[0].Query)
+	} else if ff[0].Query != tmpl {
+		t.Errorf("query was expected to be called with %q query, got %q", tmpl, ff[0].Query)
 	} else if len(ff[0].Args) != 1 {
 		t.Errorf("query was expected to be called with 1 argument, got %d", len(ff[0].Args))
 	} else if !reflect.DeepEqual(ff[0].Args[0], arg) {
@@ -323,10 +356,136 @@ func TestQueryContext(t *testing.T) {
 	}
 }
 
+func TestQueryOptions(t *testing.T) {
+	dot := DotSql{
+		queries: map[string]*template.Template{
+			"select": createTemplate(t, "SELECT * from users WHERE name = ?{{if  .exclude_deleted}} AND deleted IS NULL{{end}}"),
+		},
+	}
+	dotExcludeDeleted := dot.WithOptions(map[string]interface{}{"exclude_deleted": true})
+
+	queryerStub := func(err error) *QueryerMock {
+		return &QueryerMock{
+			QueryFunc: func(_ string, _ ...interface{}) (*sql.Rows, error) {
+				if err != nil {
+					return nil, err
+				}
+				return &sql.Rows{}, nil
+			},
+		}
+	}
+
+	arg := "test"
+
+	// query not found
+	q := queryerStub(nil)
+	rows, err := dot.Query(q, "insert", arg)
+	if rows != nil {
+		t.Error("rows expected to be nil, got non-nil")
+	}
+
+	if err == nil {
+		t.Error("err expected to be non-nil, got nil")
+	}
+
+	ff := q.QueryCalls()
+	if len(ff) > 0 {
+		t.Error("query was not expected to be called")
+	}
+
+	// error returned by db
+	q = queryerStub(errors.New("critical error"))
+	rows, err = dot.Query(q, "select", arg)
+	if rows != nil {
+		t.Error("rows expected to be nil, got non-nil")
+	}
+
+	if err == nil {
+		t.Error("err expected to be non-nil, got nil")
+	}
+
+	ff = q.QueryCalls()
+	tmpl := extractTemplate(t, dot, "select")
+	if len(ff) != 1 {
+		t.Errorf("query was expected to be called only once, but was called %d times", len(ff))
+	} else if ff[0].Query != tmpl {
+		t.Errorf("query was expected to be called with %q query, got %q", tmpl, ff[0].Query)
+	} else if len(ff[0].Args) != 1 {
+		t.Errorf("query was expected to be called with 1 argument, got %d", len(ff[0].Args))
+	} else if !reflect.DeepEqual(ff[0].Args[0], arg) {
+		t.Errorf("query was expected to be called with %q argument, got %v", arg, ff[0].Args[0])
+	}
+
+	// error returned by db (with options)
+	q = queryerStub(errors.New("critical error"))
+	rows, err = dotExcludeDeleted.Query(q, "select", arg)
+	if rows != nil {
+		t.Error("rows expected to be nil, got non-nil")
+	}
+
+	if err == nil {
+		t.Error("err expected to be non-nil, got nil")
+	}
+
+	ff = q.QueryCalls()
+	tmpl = extractTemplate(t, dotExcludeDeleted, "select")
+	if len(ff) != 1 {
+		t.Errorf("query was expected to be called only once, but was called %d times", len(ff))
+	} else if ff[0].Query != tmpl {
+		t.Errorf("query was expected to be called with %q query, got %q", tmpl, ff[0].Query)
+	} else if len(ff[0].Args) != 1 {
+		t.Errorf("query was expected to be called with 1 argument, got %d", len(ff[0].Args))
+	} else if !reflect.DeepEqual(ff[0].Args[0], arg) {
+		t.Errorf("query was expected to be called with %q argument, got %v", arg, ff[0].Args[0])
+	}
+
+	// successful query
+	q = queryerStub(nil)
+	rows, err = dot.Query(q, "select", arg)
+	if rows == nil {
+		t.Error("rows expected to be non-nil, got nil")
+	}
+
+	failIfError(t, err)
+
+	ff = q.QueryCalls()
+	tmpl = extractTemplate(t, dot, "select")
+	if len(ff) != 1 {
+		t.Errorf("query was expected to be called only once, but was called %d times", len(ff))
+	} else if ff[0].Query != tmpl {
+		t.Errorf("query was expected to be called with %q query, got %q", tmpl, ff[0].Query)
+	} else if len(ff[0].Args) != 1 {
+		t.Errorf("query was expected to be called with 1 argument, got %d", len(ff[0].Args))
+	} else if !reflect.DeepEqual(ff[0].Args[0], arg) {
+		t.Errorf("query was expected to be called with %q argument, got %v", arg, ff[0].Args[0])
+	}
+
+	// successful query (with options)
+	q = queryerStub(nil)
+	rows, err = dotExcludeDeleted.Query(q, "select", arg)
+	if rows == nil {
+		t.Error("rows expected to be non-nil, got nil")
+	}
+
+	failIfError(t, err)
+
+	ff = q.QueryCalls()
+	tmpl = extractTemplate(t, dotExcludeDeleted, "select")
+	if len(ff) != 1 {
+		t.Errorf("query was expected to be called only once, but was called %d times", len(ff))
+	} else if ff[0].Query != tmpl {
+		t.Errorf("query was expected to be called with %q query, got %q", tmpl, ff[0].Query)
+	} else if len(ff[0].Args) != 1 {
+		t.Errorf("query was expected to be called with 1 argument, got %d", len(ff[0].Args))
+	} else if !reflect.DeepEqual(ff[0].Args[0], arg) {
+		t.Errorf("query was expected to be called with %q argument, got %v", arg, ff[0].Args[0])
+	}
+}
+
 func TestQueryRow(t *testing.T) {
 	dot := DotSql{
-		queries: map[string]string{
-			"select": "SELECT * from users WHERE name = ?",
+		queries: map[string]*template.Template{
+			"select": createTemplate(t, "SELECT * from users WHERE name = ?"),
 		},
 	}
 
@@ -368,10 +527,11 @@ func TestQueryRow(t *testing.T) {
 	}
 
 	ff = q.QueryRowCalls()
+	tmpl := extractTemplate(t, dot, "select")
 	if len(ff) != 1 {
 		t.Errorf("query was expected to be called only once, but was called %d times", len(ff))
-	} else if ff[0].Query != dot.queries["select"] {
-		t.Errorf("query was expected to be called with %q query, got %q", dot.queries["select"], ff[0].Query)
+	} else if ff[0].Query != tmpl {
+		t.Errorf("query was expected to be called with %q query, got %q", tmpl, ff[0].Query)
 	} else if len(ff[0].Args) != 1 {
 		t.Errorf("query was expected to be called with 1 argument, got %d", len(ff[0].Args))
 	} else if !reflect.DeepEqual(ff[0].Args[0], arg) {
@@ -388,8 +548,8 @@ func TestQueryRow(t *testing.T) {
 	ff = q.QueryRowCalls()
 	if len(ff) != 1 {
 		t.Errorf("query was expected to be called only once, but was called %d times", len(ff))
-	} else if ff[0].Query != dot.queries["select"] {
-		t.Errorf("query was expected to be called with %q query, got %q", dot.queries["select"], ff[0].Query)
+	} else if ff[0].Query != tmpl {
+		t.Errorf("query was expected to be called with %q query, got %q", tmpl, ff[0].Query)
 	} else if len(ff[0].Args) != 1 {
 		t.Errorf("query was expected to be called with 1 argument, got %d", len(ff[0].Args))
 	} else if !reflect.DeepEqual(ff[0].Args[0], arg) {
@@ -399,8 +559,8 @@ func TestQueryRow(t *testing.T) {
 
 func TestQueryRowContext(t *testing.T) {
 	dot := DotSql{
-		queries: map[string]string{
-			"select": "SELECT * from users WHERE name = ?",
+		queries: map[string]*template.Template{
+			"select": createTemplate(t, "SELECT * from users WHERE name = ?"),
 		},
 	}
 
@@ -443,10 +603,11 @@ func TestQueryRowContext(t *testing.T) {
 	}
 
 	ff = q.QueryRowContextCalls()
+	tmpl := extractTemplate(t, dot, "select")
 	if len(ff) != 1 {
 		t.Errorf("query was expected to be called only once, but was called %d times", len(ff))
-	} else if ff[0].Query != dot.queries["select"] {
-		t.Errorf("query was expected to be called with %q query, got %q", dot.queries["select"], ff[0].Query)
+	} else if ff[0].Query != tmpl {
+		t.Errorf("query was expected to be called with %q query, got %q", tmpl, ff[0].Query)
 	} else if len(ff[0].Args) != 1 {
 		t.Errorf("query was expected to be called with 1 argument, got %d", len(ff[0].Args))
 	} else if !reflect.DeepEqual(ff[0].Args[0], arg) {
@@ -465,8 +626,8 @@ func TestQueryRowContext(t *testing.T) {
 	ff = q.QueryRowContextCalls()
 	if len(ff) != 1 {
 		t.Errorf("query was expected to be called only once, but was called %d times", len(ff))
-	} else if ff[0].Query != dot.queries["select"] {
-		t.Errorf("query was expected to be called with %q query, got %q", dot.queries["select"], ff[0].Query)
+	} else if ff[0].Query != tmpl {
+		t.Errorf("query was expected to be called with %q query, got %q", tmpl, ff[0].Query)
 	} else if len(ff[0].Args) != 1 {
 		t.Errorf("query was expected to be called with 1 argument, got %d", len(ff[0].Args))
 	} else if !reflect.DeepEqual(ff[0].Args[0], arg) {
@@ -488,8 +649,8 @@ func (s sqlResult) RowsAffected() (int64, error) {
 
 func TestExec(t *testing.T) {
 	dot := DotSql{
-		queries: map[string]string{
-			"select": "SELECT * from users WHERE name = ?",
+		queries: map[string]*template.Template{
+			"select": createTemplate(t, "SELECT * from users WHERE name = ?"),
 		},
 	}
 
@@ -534,10 +695,11 @@ func TestExec(t *testing.T) {
 	}
 
 	ff = q.ExecCalls()
+	tmpl := extractTemplate(t, dot, "select")
 	if len(ff) != 1 {
 		t.Errorf("exec was expected to be called only once, but was called %d times", len(ff))
-	} else if ff[0].Query != dot.queries["select"] {
-		t.Errorf("exec was expected to be called with %q query, got %q", dot.queries["select"], ff[0].Query)
+	} else if ff[0].Query != tmpl {
+		t.Errorf("exec was expected to be called with %q query, got %q", tmpl, ff[0].Query)
 	} else if len(ff[0].Args) != 1 {
 		t.Errorf("exec was expected to be called with 1 argument, got %d", len(ff[0].Args))
 	} else if !reflect.DeepEqual(ff[0].Args[0], arg) {
@@ -556,8 +718,8 @@ func TestExec(t *testing.T) {
 	ff = q.ExecCalls()
 	if len(ff) != 1 {
 		t.Errorf("exec was expected to be called only once, but was called %d times", len(ff))
-	} else if ff[0].Query != dot.queries["select"] {
-		t.Errorf("exec was expected to be called with %q query, got %q", dot.queries["select"], ff[0].Query)
+	} else if ff[0].Query != tmpl {
+		t.Errorf("exec was expected to be called with %q query, got %q", tmpl, ff[0].Query)
 	} else if len(ff[0].Args) != 1 {
 		t.Errorf("exec was expected to be called with 1 argument, got %d", len(ff[0].Args))
 	} else if !reflect.DeepEqual(ff[0].Args[0], arg) {
@@ -567,8 +729,8 @@ func TestExec(t *testing.T) {
 
 func TestExecContext(t *testing.T) {
 	dot := DotSql{
-		queries: map[string]string{
-			"select": "SELECT * from users WHERE name = ?",
+		queries: map[string]*template.Template{
+			"select": createTemplate(t, "SELECT * from users WHERE name = ?"),
 		},
 	}
 
@@ -614,10 +776,11 @@ func TestExecContext(t *testing.T) {
 	}
 
 	ff = q.ExecContextCalls()
+	tmpl := extractTemplate(t, dot, "select")
 	if len(ff) != 1 {
 		t.Errorf("exec was expected to be called only once, but was called %d times", len(ff))
-	} else if ff[0].Query != dot.queries["select"] {
-		t.Errorf("exec was expected to be called with %q query, got %q", dot.queries["select"], ff[0].Query)
+	} else if ff[0].Query != tmpl {
+		t.Errorf("exec was expected to be called with %q query, got %q", tmpl, ff[0].Query)
 	} else if len(ff[0].Args) != 1 {
 		t.Errorf("exec was expected to be called with 1 argument, got %d", len(ff[0].Args))
 	} else if !reflect.DeepEqual(ff[0].Args[0], arg) {
@@ -638,8 +801,8 @@ func TestExecContext(t *testing.T) {
 	ff = q.ExecContextCalls()
 	if len(ff) != 1 {
 		t.Errorf("exec was expected to be called only once, but was called %d times", len(ff))
-	} else if ff[0].Query != dot.queries["select"] {
-		t.Errorf("exec was expected to be called with %q query, got %q", dot.queries["select"], ff[0].Query)
+	} else if ff[0].Query != tmpl {
+		t.Errorf("exec was expected to be called with %q query, got %q", tmpl, ff[0].Query)
 	} else if len(ff[0].Args) != 1 {
 		t.Errorf("exec was expected to be called with 1 argument, got %d", len(ff[0].Args))
 	} else if !reflect.DeepEqual(ff[0].Args[0], arg) {
@@ -714,8 +877,9 @@ func TestQueries(t *testing.T) {
 	}
 
 	for name, query := range got {
-		if query != expectedQueryMap[name] {
-			t.Errorf("QueryMap()[%s] == '%s', expected '%s'", name, query, expectedQueryMap[name])
+		tmpl := executeTemplate(t, query)
+		if tmpl != expectedQueryMap[name] {
+			t.Errorf("QueryMap()[%s] == '%s', expected '%s'", name, tmpl, expectedQueryMap[name])
 		}
 	}
 }
@@ -754,7 +918,7 @@ func TestMergeTakesPresecendeFromLastArgument(t *testing.T) {
 
 	x := Merge(a, b, c)
 
-	got := x.QueryMap()["query"]
+	got := executeTemplate(t, x.QueryMap()["query"])
 	if expectedQuery != got {
 		t.Errorf("Expected query: '%s', got: '%s'", expectedQuery, got)
 	}

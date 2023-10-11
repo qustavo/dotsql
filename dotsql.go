@@ -59,7 +59,7 @@ type ExecerContext interface {
 
 // DotSql represents a dotSQL queries holder.
 type DotSql struct {
-	queries map[string]string
+	queries map[string]*template.Template
 	options map[string]interface{}
 }
 
@@ -75,18 +75,16 @@ func (d DotSql) WithOptions(additionalOptions map[string]interface{}) DotSql {
 }
 
 func (d DotSql) lookupQuery(name string, options map[string]interface{}) (query string, err error) {
-	query, ok := d.queries[name]
+	template, ok := d.queries[name]
 	if !ok {
 		err = fmt.Errorf("dotsql: '%s' could not be found", name)
 	}
-	if query != "" {
-		var tmpl *template.Template
+	if template != nil {
 		buffer := bytes.NewBufferString("")
-		tmpl, err = template.New(name).Parse(query)
 		if err != nil {
 			return
 		}
-		err = tmpl.Execute(buffer, options)
+		err = template.Execute(buffer, options)
 		if err != nil {
 			return
 		}
@@ -182,7 +180,7 @@ func (d DotSql) Raw(name string) (string, error) {
 }
 
 // QueryMap returns a map[string]string of loaded queries
-func (d DotSql) QueryMap() map[string]string {
+func (d DotSql) QueryMap() map[string]*template.Template {
 	return d.queries
 }
 
@@ -191,8 +189,17 @@ func Load(r io.Reader) (*DotSql, error) {
 	scanner := &Scanner{}
 	queries := scanner.Run(bufio.NewScanner(r))
 
+	templates := make(map[string]*template.Template, len(queries))
+	var err error
+	for k, v := range queries {
+		templates[k], err = template.New(k).Parse(v)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	dotsql := &DotSql{
-		queries: queries,
+		queries: templates,
 	}
 
 	return dotsql, nil
@@ -219,7 +226,7 @@ func LoadFromString(sql string) (*DotSql, error) {
 // It's in-order, so the last source will override queries with the same name
 // in the previous arguments if any.
 func Merge(dots ...*DotSql) *DotSql {
-	queries := make(map[string]string)
+	queries := make(map[string]*template.Template)
 
 	for _, dot := range dots {
 		for k, v := range dot.QueryMap() {
