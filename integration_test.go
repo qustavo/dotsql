@@ -1,5 +1,3 @@
-// +build integration
-
 package dotsql
 
 import (
@@ -121,4 +119,46 @@ func TestSelectOne(t *testing.T) {
 	if email != "foo@bar.com" {
 		t.Errorf("Expect to find user with email == %s, got %s", "foo@bar.com", email)
 	}
+}
+
+func countUsers(t *testing.T, dot *DotSql, db QueryRower, name string, expected int) {
+	t.Helper()
+	row, err := dot.QueryRow(db, name)
+	if err != nil {
+		t.Error(err)
+	}
+	var count int
+	err = row.Scan(&count)
+	if err != nil {
+		t.Error(err)
+	}
+	if expected != count {
+		t.Errorf("expected %d users but got %d", expected, count)
+	}
+}
+
+func TestSelectOption(t *testing.T) {
+	db, dotsql := initDotSql()
+	defer db.Close()
+
+	_, err := dotsql.Exec(db, "create-user", "foo", "foo@bar.com")
+	if err != nil {
+		panic(err)
+	}
+	_, err = dotsql.Exec(db, "create-user", "bar", "bar@bar.com")
+	if err != nil {
+		panic(err)
+	}
+
+	countUsers(t, dotsql, db, "count-users", 2)
+	excludeDeleted := dotsql.WithOptions(map[string]interface{}{"exclude_deleted": true})
+	countUsers(t, &excludeDeleted, db, "count-users", 2)
+
+	_, err = dotsql.Exec(db, "soft-delete-user", "foo@bar.com")
+	if err != nil {
+		panic(err)
+	}
+
+	countUsers(t, dotsql, db, "count-users", 2)
+	countUsers(t, &excludeDeleted, db, "count-users", 1)
 }

@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"text/template"
 )
 
 func failIfError(t *testing.T, err error) {
