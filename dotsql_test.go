@@ -362,7 +362,7 @@ func TestQueryOptions(t *testing.T) {
 			"select": createTemplate(t, "SELECT * from users WHERE name = ?{{if  .exclude_deleted}} AND deleted IS NULL{{end}}"),
 		},
 	}
-	dotExcludeDeleted := dot.WithOptions(map[string]interface{}{"exclude_deleted": true})
+	dotExcludeDeleted := dot.WithData(map[string]any{"exclude_deleted": true})
 
 	queryerStub := func(err error) *QueryerMock {
 		return &QueryerMock{
@@ -921,5 +921,15 @@ func TestMergeTakesPresecendeFromLastArgument(t *testing.T) {
 	got := executeTemplate(t, x.QueryMap()["query"])
 	if expectedQuery != got {
 		t.Errorf("Expected query: '%s', got: '%s'", expectedQuery, got)
+	}
+}
+
+func TestTemplatesFailQuickly(t *testing.T) {
+	_, err := LoadFromString("-- name: bad-query\nSELECT * FROM {{if .user}}users{{else}}clients")
+	expectedErr := errors.New("bad-query:1: unexpected EOF")
+	if err == nil {
+		t.Fatalf("expected '%s' error, but didn't get one", expectedErr)
+	} else if errors.Is(err, expectedErr) {
+		t.Errorf("expected '%s' error, but got '%s'", expectedErr, err)
 	}
 }

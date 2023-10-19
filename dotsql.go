@@ -60,21 +60,14 @@ type ExecerContext interface {
 // DotSql represents a dotSQL queries holder.
 type DotSql struct {
 	queries map[string]*template.Template
-	options map[string]interface{}
+	data    any
 }
 
-func (d DotSql) WithOptions(additionalOptions map[string]interface{}) DotSql {
-	options := make(map[string]interface{})
-	for k, v := range d.options {
-		options[k] = v
-	}
-	for k, v := range additionalOptions {
-		options[k] = v
-	}
-	return DotSql{queries: d.queries, options: options}
+func (d DotSql) WithData(data any) DotSql {
+	return DotSql{queries: d.queries, data: data}
 }
 
-func (d DotSql) lookupQuery(name string, options map[string]interface{}) (query string, err error) {
+func (d DotSql) lookupQuery(name string, data any) (query string, err error) {
 	template, ok := d.queries[name]
 	if !ok {
 		err = fmt.Errorf("dotsql: '%s' could not be found", name)
@@ -84,7 +77,7 @@ func (d DotSql) lookupQuery(name string, options map[string]interface{}) (query 
 		if err != nil {
 			return
 		}
-		err = template.Execute(buffer, options)
+		err = template.Execute(buffer, data)
 		if err != nil {
 			return
 		}
@@ -96,7 +89,7 @@ func (d DotSql) lookupQuery(name string, options map[string]interface{}) (query 
 
 // Prepare is a wrapper for database/sql's Prepare(), using dotsql named query.
 func (d DotSql) Prepare(db Preparer, name string) (*sql.Stmt, error) {
-	query, err := d.lookupQuery(name, d.options)
+	query, err := d.lookupQuery(name, d.data)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +99,7 @@ func (d DotSql) Prepare(db Preparer, name string) (*sql.Stmt, error) {
 
 // PrepareContext is a wrapper for database/sql's PrepareContext(), using dotsql named query.
 func (d DotSql) PrepareContext(ctx context.Context, db PreparerContext, name string) (*sql.Stmt, error) {
-	query, err := d.lookupQuery(name, d.options)
+	query, err := d.lookupQuery(name, d.data)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +109,7 @@ func (d DotSql) PrepareContext(ctx context.Context, db PreparerContext, name str
 
 // Query is a wrapper for database/sql's Query(), using dotsql named query.
 func (d DotSql) Query(db Queryer, name string, args ...interface{}) (*sql.Rows, error) {
-	query, err := d.lookupQuery(name, d.options)
+	query, err := d.lookupQuery(name, d.data)
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +119,7 @@ func (d DotSql) Query(db Queryer, name string, args ...interface{}) (*sql.Rows, 
 
 // QueryContext is a wrapper for database/sql's QueryContext(), using dotsql named query.
 func (d DotSql) QueryContext(ctx context.Context, db QueryerContext, name string, args ...interface{}) (*sql.Rows, error) {
-	query, err := d.lookupQuery(name, d.options)
+	query, err := d.lookupQuery(name, d.data)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +129,7 @@ func (d DotSql) QueryContext(ctx context.Context, db QueryerContext, name string
 
 // QueryRow is a wrapper for database/sql's QueryRow(), using dotsql named query.
 func (d DotSql) QueryRow(db QueryRower, name string, args ...interface{}) (*sql.Row, error) {
-	query, err := d.lookupQuery(name, d.options)
+	query, err := d.lookupQuery(name, d.data)
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +139,7 @@ func (d DotSql) QueryRow(db QueryRower, name string, args ...interface{}) (*sql.
 
 // QueryRowContext is a wrapper for database/sql's QueryRowContext(), using dotsql named query.
 func (d DotSql) QueryRowContext(ctx context.Context, db QueryRowerContext, name string, args ...interface{}) (*sql.Row, error) {
-	query, err := d.lookupQuery(name, d.options)
+	query, err := d.lookupQuery(name, d.data)
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +149,7 @@ func (d DotSql) QueryRowContext(ctx context.Context, db QueryRowerContext, name 
 
 // Exec is a wrapper for database/sql's Exec(), using dotsql named query.
 func (d DotSql) Exec(db Execer, name string, args ...interface{}) (sql.Result, error) {
-	query, err := d.lookupQuery(name, d.options)
+	query, err := d.lookupQuery(name, d.data)
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +159,7 @@ func (d DotSql) Exec(db Execer, name string, args ...interface{}) (sql.Result, e
 
 // ExecContext is a wrapper for database/sql's ExecContext(), using dotsql named query.
 func (d DotSql) ExecContext(ctx context.Context, db ExecerContext, name string, args ...interface{}) (sql.Result, error) {
-	query, err := d.lookupQuery(name, d.options)
+	query, err := d.lookupQuery(name, d.data)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +169,7 @@ func (d DotSql) ExecContext(ctx context.Context, db ExecerContext, name string, 
 
 // Raw returns the query, everything after the --name tag
 func (d DotSql) Raw(name string) (string, error) {
-	return d.lookupQuery(name, d.options)
+	return d.lookupQuery(name, d.data)
 }
 
 // QueryMap returns a map[string]string of loaded queries

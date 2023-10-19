@@ -78,7 +78,7 @@ Text Interpolation
 --
 [text/template](https://pkg.go.dev/text/template)-style text interpolation is supported.
 
-To use, call `.WithOptions(map[string]interface{})` on your dotsql instance to
+To use, call `.WithData(any)` on your dotsql instance to
 create a new instance which passes those values into the templating library.
 
 ```sql
@@ -87,7 +87,7 @@ SELECT count(*) FROM users {{if .exclude_deleted}}WHERE deleted IS NULL{{end}}
 ```
 
 ```go
-dotsql.WithOptions(map[string]interface{}{"exclude_deleted": true}).Query(db, "count-users")
+dotsql.WithData(map[string]any{"exclude_deleted": true}).Query(db, "count-users")
 ```
 
 Embeding

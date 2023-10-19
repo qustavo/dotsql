@@ -139,7 +139,7 @@ func countUsers(t *testing.T, dot *DotSql, db QueryRower, name string, expected 
 	}
 }
 
-func TestSelectOption(t *testing.T) {
+func TestSelectData(t *testing.T) {
 	db, dotsql := initDotSql()
 	defer db.Close()
 
@@ -153,7 +153,7 @@ func TestSelectOption(t *testing.T) {
 	}
 
 	countUsers(t, dotsql, db, "count-users", 2)
-	excludeDeleted := dotsql.WithOptions(map[string]interface{}{"exclude_deleted": true})
+	excludeDeleted := dotsql.WithData(map[string]any{"exclude_deleted": true})
 	countUsers(t, &excludeDeleted, db, "count-users", 2)
 
 	_, err = dotsql.Exec(db, "soft-delete-user", "foo@bar.com")
