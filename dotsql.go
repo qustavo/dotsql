@@ -67,24 +67,22 @@ func (d DotSql) WithData(data any) DotSql {
 	return DotSql{queries: d.queries, data: data}
 }
 
-func (d DotSql) lookupQuery(name string, data any) (query string, err error) {
+func (d DotSql) lookupQuery(name string, data any) (string, error) {
+	var query string
 	template, ok := d.queries[name]
 	if !ok {
-		err = fmt.Errorf("dotsql: '%s' could not be found", name)
+		return query, fmt.Errorf("dotsql: '%s' could not be found", name)
 	}
 	if template != nil {
 		buffer := bytes.NewBufferString("")
+		err := template.Execute(buffer, data)
 		if err != nil {
-			return
-		}
-		err = template.Execute(buffer, data)
-		if err != nil {
-			return
+			return query, err
 		}
 		query = buffer.String()
 	}
 
-	return
+	return query, nil
 }
 
 // Prepare is a wrapper for database/sql's Prepare(), using dotsql named query.
