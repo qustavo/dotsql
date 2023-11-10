@@ -50,7 +50,7 @@ func TestInserts(t *testing.T) {
 
 	_, err := dotsql.Exec(db, "create-user", "Foo Bar", "foo@bar.com")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
 	row := db.QueryRow(
@@ -71,12 +71,12 @@ func TestSelect(t *testing.T) {
 
 	_, err := db.Exec("INSERT INTO users(email) VALUES('foo@bar.com')")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
 	rows, err := dotsql.Query(db, "find-one-user-by-email", "foo@bar.com")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
 	ok := rows.Next()
@@ -88,7 +88,7 @@ func TestSelect(t *testing.T) {
 	var email string
 	err = rows.Scan(&id, &name, &email)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
 	if email != "foo@bar.com" {
@@ -102,12 +102,12 @@ func TestSelectOne(t *testing.T) {
 
 	_, err := db.Exec("INSERT INTO users(email) VALUES('foo@bar.com')")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
 	row, err := dotsql.QueryRow(db, "find-one-user-by-email", "foo@bar.com")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
 	var id, name interface{}
@@ -145,11 +145,11 @@ func TestSelectData(t *testing.T) {
 
 	_, err := dotsql.Exec(db, "create-user", "foo", "foo@bar.com")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	_, err = dotsql.Exec(db, "create-user", "bar", "bar@bar.com")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
 	countUsers(t, dotsql, db, "count-users", 2)
@@ -158,7 +158,7 @@ func TestSelectData(t *testing.T) {
 
 	_, err = dotsql.Exec(db, "soft-delete-user", "foo@bar.com")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
 	countUsers(t, dotsql, db, "count-users", 2)

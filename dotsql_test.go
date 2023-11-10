@@ -366,7 +366,7 @@ func TestQueryOptions(t *testing.T) {
 
 	queryerStub := func(err error) *QueryerMock {
 		return &QueryerMock{
-			QueryFunc: func(_ string, _ ...interface{}) (*sql.Rows, error) {
+			QueryFunc: func(_ string, _ ...any) (*sql.Rows, error) {
 				if err != nil {
 					return nil, err
 				}
@@ -375,17 +375,17 @@ func TestQueryOptions(t *testing.T) {
 		}
 	}
 
-	arg := "test"
+	testArg := "test"
 
 	// query not found
 	q := queryerStub(nil)
-	rows, err := dot.Query(q, "insert", arg)
+	rows, err := dot.Query(q, "insert", testArg)
 	if rows != nil {
 		t.Error("rows expected to be nil, got non-nil")
 	}
 
 	if err == nil {
-		t.Error("err expected to be non-nil, got nil")
+		t.Fatal("err expected to be non-nil, got nil")
 	}
 
 	ff := q.QueryCalls()
@@ -393,9 +393,10 @@ func TestQueryOptions(t *testing.T) {
 		t.Error("query was not expected to be called")
 	}
 
+	criticalError := errors.New("critical error")
 	// error returned by db
-	q = queryerStub(errors.New("critical error"))
-	rows, err = dot.Query(q, "select", arg)
+	q = queryerStub(criticalError)
+	rows, err = dot.Query(q, "select", testArg)
 	if rows != nil {
 		t.Error("rows expected to be nil, got non-nil")
 	}
@@ -412,13 +413,13 @@ func TestQueryOptions(t *testing.T) {
 		t.Errorf("query was expected to be called with %q query, got %q", tmpl, ff[0].Query)
 	} else if len(ff[0].Args) != 1 {
 		t.Errorf("query was expected to be called with 1 argument, got %d", len(ff[0].Args))
-	} else if !reflect.DeepEqual(ff[0].Args[0], arg) {
-		t.Errorf("query was expected to be called with %q argument, got %v", arg, ff[0].Args[0])
+	} else if !reflect.DeepEqual(ff[0].Args[0], testArg) {
+		t.Errorf("query was expected to be called with %q argument, got %v", testArg, ff[0].Args[0])
 	}
 
 	// error returned by db (with options)
-	q = queryerStub(errors.New("critical error"))
-	rows, err = dotExcludeDeleted.Query(q, "select", arg)
+	q = queryerStub(criticalError)
+	rows, err = dotExcludeDeleted.Query(q, "select", testArg)
 	if rows != nil {
 		t.Error("rows expected to be nil, got non-nil")
 	}
@@ -435,13 +436,13 @@ func TestQueryOptions(t *testing.T) {
 		t.Errorf("query was expected to be called with %q query, got %q", tmpl, ff[0].Query)
 	} else if len(ff[0].Args) != 1 {
 		t.Errorf("query was expected to be called with 1 argument, got %d", len(ff[0].Args))
-	} else if !reflect.DeepEqual(ff[0].Args[0], arg) {
-		t.Errorf("query was expected to be called with %q argument, got %v", arg, ff[0].Args[0])
+	} else if !reflect.DeepEqual(ff[0].Args[0], testArg) {
+		t.Errorf("query was expected to be called with %q argument, got %v", testArg, ff[0].Args[0])
 	}
 
 	// successful query
 	q = queryerStub(nil)
-	rows, err = dot.Query(q, "select", arg)
+	rows, err = dot.Query(q, "select", testArg)
 	if rows == nil {
 		t.Error("rows expected to be non-nil, got nil")
 	}
@@ -456,13 +457,13 @@ func TestQueryOptions(t *testing.T) {
 		t.Errorf("query was expected to be called with %q query, got %q", tmpl, ff[0].Query)
 	} else if len(ff[0].Args) != 1 {
 		t.Errorf("query was expected to be called with 1 argument, got %d", len(ff[0].Args))
-	} else if !reflect.DeepEqual(ff[0].Args[0], arg) {
-		t.Errorf("query was expected to be called with %q argument, got %v", arg, ff[0].Args[0])
+	} else if !reflect.DeepEqual(ff[0].Args[0], testArg) {
+		t.Errorf("query was expected to be called with %q argument, got %v", testArg, ff[0].Args[0])
 	}
 
 	// successful query (with options)
 	q = queryerStub(nil)
-	rows, err = dotExcludeDeleted.Query(q, "select", arg)
+	rows, err = dotExcludeDeleted.Query(q, "select", testArg)
 	if rows == nil {
 		t.Error("rows expected to be non-nil, got nil")
 	}
@@ -477,8 +478,8 @@ func TestQueryOptions(t *testing.T) {
 		t.Errorf("query was expected to be called with %q query, got %q", tmpl, ff[0].Query)
 	} else if len(ff[0].Args) != 1 {
 		t.Errorf("query was expected to be called with 1 argument, got %d", len(ff[0].Args))
-	} else if !reflect.DeepEqual(ff[0].Args[0], arg) {
-		t.Errorf("query was expected to be called with %q argument, got %v", arg, ff[0].Args[0])
+	} else if !reflect.DeepEqual(ff[0].Args[0], testArg) {
+		t.Errorf("query was expected to be called with %q argument, got %v", testArg, ff[0].Args[0])
 	}
 }
 
@@ -926,10 +927,10 @@ func TestMergeTakesPresecendeFromLastArgument(t *testing.T) {
 
 func TestTemplatesFailQuickly(t *testing.T) {
 	_, err := LoadFromString("-- name: bad-query\nSELECT * FROM {{if .user}}users{{else}}clients")
-	expectedErr := errors.New("bad-query:1: unexpected EOF")
+	expectedErr := "template: bad-query:1: unexpected EOF"
 	if err == nil {
 		t.Fatalf("expected '%s' error, but didn't get one", expectedErr)
-	} else if errors.Is(err, expectedErr) {
-		t.Errorf("expected '%s' error, but got '%s'", expectedErr, err)
+	} else if err.Error() != expectedErr {
+		t.Errorf("expected '%s' error, but got '%v'", expectedErr, err)
 	}
 }

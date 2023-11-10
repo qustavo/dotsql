@@ -68,21 +68,20 @@ func (d DotSql) WithData(data any) DotSql {
 }
 
 func (d DotSql) lookupQuery(name string, data any) (string, error) {
-	var query string
 	template, ok := d.queries[name]
 	if !ok {
-		return query, fmt.Errorf("dotsql: '%s' could not be found", name)
+		return "", fmt.Errorf("dotsql: '%s' could not be found", name)
 	}
-	if template != nil {
-		buffer := bytes.NewBufferString("")
-		err := template.Execute(buffer, data)
-		if err != nil {
-			return query, err
-		}
-		query = buffer.String()
+	if template == nil {
+		return "", nil
+	}
+	buffer := bytes.NewBufferString("")
+	err := template.Execute(buffer, data)
+	if err != nil {
+		return "", fmt.Errorf("error parsing template: %w", err)
 	}
 
-	return query, nil
+	return buffer.String(), nil
 }
 
 // Prepare is a wrapper for database/sql's Prepare(), using dotsql named query.
@@ -181,8 +180,8 @@ func Load(r io.Reader) (*DotSql, error) {
 	queries := scanner.Run(bufio.NewScanner(r))
 
 	templates := make(map[string]*template.Template, len(queries))
-	var err error
 	for k, v := range queries {
+		var err error
 		templates[k], err = template.New(k).Parse(v)
 		if err != nil {
 			return nil, err
