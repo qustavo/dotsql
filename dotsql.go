@@ -179,20 +179,18 @@ func Load(r io.Reader) (*DotSql, error) {
 	scanner := &Scanner{}
 	queries := scanner.Run(bufio.NewScanner(r))
 
-	templates := make(map[string]*template.Template, len(queries))
+	templates := make(map[string]*template.Template)
 	for k, v := range queries {
-		var err error
-		templates[k], err = template.New(k).Parse(v)
+		tmpl, err := template.New(k).Parse(v)
 		if err != nil {
 			return nil, err
 		}
+		templates[k] = tmpl
 	}
 
-	dotsql := &DotSql{
+	return &DotSql{
 		queries: templates,
-	}
-
-	return dotsql, nil
+	}, nil
 }
 
 // LoadFromFile imports SQL queries from the file.
