@@ -127,7 +127,7 @@ func countUsers(t *testing.T, dot *DotSql, db QueryRower, name string, expected 
 	t.Helper()
 	row, err := dot.QueryRow(db, name)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	var count int
 	err = row.Scan(&count)
@@ -139,7 +139,7 @@ func countUsers(t *testing.T, dot *DotSql, db QueryRower, name string, expected 
 	}
 }
 
-func TestSelectData(t *testing.T) {
+func TestSelectWithData(t *testing.T) {
 	db, dotsql := initDotSql()
 	defer db.Close()
 
