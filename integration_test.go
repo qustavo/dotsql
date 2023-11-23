@@ -50,7 +50,7 @@ func TestInserts(t *testing.T) {
 
 	_, err := dotsql.Exec(db, "create-user", "Foo Bar", "foo@bar.com")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
 	row := db.QueryRow(
@@ -71,12 +71,12 @@ func TestSelect(t *testing.T) {
 
 	_, err := db.Exec("INSERT INTO users(email) VALUES('foo@bar.com')")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
 	rows, err := dotsql.Query(db, "find-one-user-by-email", "foo@bar.com")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
 	ok := rows.Next()
@@ -88,7 +88,7 @@ func TestSelect(t *testing.T) {
 	var email string
 	err = rows.Scan(&id, &name, &email)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
 	if email != "foo@bar.com" {
@@ -102,12 +102,12 @@ func TestSelectOne(t *testing.T) {
 
 	_, err := db.Exec("INSERT INTO users(email) VALUES('foo@bar.com')")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
 	row, err := dotsql.QueryRow(db, "find-one-user-by-email", "foo@bar.com")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
 	var id, name interface{}
@@ -121,4 +121,46 @@ func TestSelectOne(t *testing.T) {
 	if email != "foo@bar.com" {
 		t.Errorf("Expect to find user with email == %s, got %s", "foo@bar.com", email)
 	}
+}
+
+func countUsers(t *testing.T, dot *DotSql, db QueryRower, name string, expected int) {
+	t.Helper()
+	row, err := dot.QueryRow(db, name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var count int
+	err = row.Scan(&count)
+	if err != nil {
+		t.Error(err)
+	}
+	if expected != count {
+		t.Errorf("expected %d users but got %d", expected, count)
+	}
+}
+
+func TestSelectWithData(t *testing.T) {
+	db, dotsql := initDotSql()
+	defer db.Close()
+
+	_, err := dotsql.Exec(db, "create-user", "foo", "foo@bar.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = dotsql.Exec(db, "create-user", "bar", "bar@bar.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	countUsers(t, dotsql, db, "count-users", 2)
+	excludeDeleted := dotsql.WithData(map[string]any{"exclude_deleted": true})
+	countUsers(t, &excludeDeleted, db, "count-users", 2)
+
+	_, err = dotsql.Exec(db, "soft-delete-user", "foo@bar.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	countUsers(t, dotsql, db, "count-users", 2)
+	countUsers(t, &excludeDeleted, db, "count-users", 1)
 }

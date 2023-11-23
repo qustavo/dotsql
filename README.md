@@ -74,15 +74,26 @@ dot2, err := dotsql.LoadFromFile("queries2.sql")
 dot := dotsql.Merge(dot1, dot2)
 ```
 
+Text Interpolation
+--
+[text/template](https://pkg.go.dev/text/template)-style text interpolation is supported.
+
+To use, call `.WithData(any)` on your dotsql instance to
+create a new instance which passes those values into the templating library.
+
+```sql
+-- name: count-users
+SELECT count(*) FROM users {{if .exclude_deleted}}WHERE deleted IS NULL{{end}}
+```
+
+```go
+dotsql.WithData(map[string]any{"exclude_deleted": true}).Query(db, "count-users")
+```
+
 Embeding
 --
 To avoid distributing `sql` files alongside the binary file, you will need to use tools like 
 [gotic](https://github.com/qustavo/gotic) to embed / pack everything into one file.
-
-TODO
---
-- [ ] Enable text interpolation inside queries using `text/template`
-
 
 SQLX
 --

@@ -1,24 +1,61 @@
 package dotsql
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"errors"
-	"reflect"
 	"strings"
 	"testing"
+	"text/template"
 )
 
 func failIfError(t *testing.T, err error) {
+	t.Helper()
 	if err != nil {
 		t.Errorf("err == nil, got '%s'", err)
 	}
 }
 
+func failIfNotError(t *testing.T, err error) {
+	t.Helper()
+	if err == nil {
+		t.Error("err expected to be non-nil, got nil")
+	}
+}
+
+func createTemplate(t *testing.T, content string) *template.Template {
+	t.Helper()
+	tmpl, err := template.New("get-users").Parse(content)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return tmpl
+}
+
+func extractTemplate(t *testing.T, dot DotSql, name string) string {
+	t.Helper()
+	query, err := dot.Raw(name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return query
+}
+
+func executeTemplate(t *testing.T, tmpl *template.Template) string {
+	t.Helper()
+	buffer := bytes.NewBufferString("")
+	err := tmpl.Execute(buffer, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return buffer.String()
+}
+
 func TestPrepare(t *testing.T) {
 	dot := DotSql{
-		queries: map[string]string{
-			"select": "SELECT * from users",
+		queries: map[string]*template.Template{
+			"select": createTemplate(t, "SELECT * from users"),
 		},
 	}
 
@@ -33,61 +70,49 @@ func TestPrepare(t *testing.T) {
 		}
 	}
 
-	// query not found
-	p := preparerStub(nil)
-	stmt, err := dot.Prepare(p, "insert")
-	if stmt != nil {
-		t.Error("stmt expected to be nil, got non-nil")
-	}
+	tmpl := extractTemplate(t, dot, "select")
 
-	if err == nil {
-		t.Error("err expected to be non-nil, got nil")
-	}
+	t.Run("query not found", func(t *testing.T) {
+		p := preparerStub(nil)
+		stmt, err := dot.Prepare(p, "insert")
+		if stmt != nil {
+			t.Error("stmt expected to be nil, got non-nil")
+		}
 
-	ff := p.PrepareCalls()
-	if len(ff) > 0 {
-		t.Error("prepare was not expected to be called")
-	}
+		failIfNotError(t, err)
+		ff := p.PrepareCalls()
+		if len(ff) > 0 {
+			t.Error("prepare was not expected to be called")
+		}
+	})
 
-	// error returned by db
-	p = preparerStub(errors.New("critical error"))
-	stmt, err = dot.Prepare(p, "select")
-	if stmt != nil {
-		t.Error("stmt expected to be nil, got non-nil")
-	}
+	t.Run("error returned by DB", func(t *testing.T) {
+		p := preparerStub(errors.New("critical error"))
+		stmt, err := dot.Prepare(p, "select")
+		if stmt != nil {
+			t.Error("stmt expected to be nil, got non-nil")
+		}
 
-	if err == nil {
-		t.Error("err expected to be non-nil, got nil")
-	}
+		failIfNotError(t, err)
+		comparePrepareCalls(t, p.PrepareCalls(), tmpl)
+	})
 
-	ff = p.PrepareCalls()
-	if len(ff) != 1 {
-		t.Errorf("prepare was expected to be called only once, but was called %d times", len(ff))
-	} else if ff[0].Query != dot.queries["select"] {
-		t.Errorf("prepare was expected to be called with %q query, got %q", dot.queries["select"], ff[0].Query)
-	}
+	t.Run("successful query preparation", func(t *testing.T) {
+		p := preparerStub(nil)
+		stmt, err := dot.Prepare(p, "select")
+		if stmt == nil {
+			t.Error("stmt expected to be non-nil, got nil")
+		}
 
-	// successful query preparation
-	p = preparerStub(nil)
-	stmt, err = dot.Prepare(p, "select")
-	if stmt == nil {
-		t.Error("stmt expected to be non-nil, got nil")
-	}
-
-	failIfError(t, err)
-
-	ff = p.PrepareCalls()
-	if len(ff) != 1 {
-		t.Errorf("prepare was expected to be called only once, but was called %d times", len(ff))
-	} else if ff[0].Query != dot.queries["select"] {
-		t.Errorf("prepare was expected to be called with %q query, got %q", dot.queries["select"], ff[0].Query)
-	}
+		failIfError(t, err)
+		comparePrepareCalls(t, p.PrepareCalls(), tmpl)
+	})
 }
 
 func TestPrepareContext(t *testing.T) {
 	dot := DotSql{
-		queries: map[string]string{
-			"select": "SELECT * from users",
+		queries: map[string]*template.Template{
+			"select": createTemplate(t, "SELECT * from users"),
 		},
 	}
 
@@ -103,66 +128,49 @@ func TestPrepareContext(t *testing.T) {
 	}
 
 	ctx := context.Background()
+	tmpl := extractTemplate(t, dot, "select")
 
-	// query not found
-	p := preparerContextStub(nil)
-	stmt, err := dot.PrepareContext(ctx, p, "insert")
-	if stmt != nil {
-		t.Error("stmt expected to be nil, got non-nil")
-	}
+	t.Run("query not found", func(t *testing.T) {
+		p := preparerContextStub(nil)
+		stmt, err := dot.PrepareContext(ctx, p, "insert")
+		if stmt != nil {
+			t.Error("stmt expected to be nil, got non-nil")
+		}
 
-	if err == nil {
-		t.Error("err expected to be non-nil, got nil")
-	}
+		failIfNotError(t, err)
+		ff := p.PrepareContextCalls()
+		if len(ff) > 0 {
+			t.Error("prepare was not expected to be called")
+		}
+	})
 
-	ff := p.PrepareContextCalls()
-	if len(ff) > 0 {
-		t.Error("prepare was not expected to be called")
-	}
+	t.Run("error returned by DB", func(t *testing.T) {
+		p := preparerContextStub(errors.New("critical error"))
+		stmt, err := dot.PrepareContext(ctx, p, "select")
+		if stmt != nil {
+			t.Error("stmt expected to be nil, got non-nil")
+		}
 
-	// error returned by db
-	p = preparerContextStub(errors.New("critical error"))
-	stmt, err = dot.PrepareContext(ctx, p, "select")
-	if stmt != nil {
-		t.Error("stmt expected to be nil, got non-nil")
-	}
+		failIfNotError(t, err)
+		comparePrepareContextCalls(t, p.PrepareContextCalls(), ctx, tmpl)
+	})
 
-	if err == nil {
-		t.Error("err expected to be non-nil, got nil")
-	}
+	t.Run("successful query preparation", func(t *testing.T) {
+		p := preparerContextStub(nil)
+		stmt, err := dot.PrepareContext(ctx, p, "select")
+		if stmt == nil {
+			t.Error("stmt expected to be non-nil, got nil")
+		}
 
-	ff = p.PrepareContextCalls()
-	if len(ff) != 1 {
-		t.Errorf("prepare was expected to be called only once, but was called %d times", len(ff))
-	} else if ff[0].Query != dot.queries["select"] {
-		t.Errorf("prepare was expected to be called with %q query, got %q", dot.queries["select"], ff[0].Query)
-	} else if !reflect.DeepEqual(ff[0].Ctx, ctx) {
-		t.Errorf("prepare context does not match")
-	}
-
-	// successful query preparation
-	p = preparerContextStub(nil)
-	stmt, err = dot.PrepareContext(ctx, p, "select")
-	if stmt == nil {
-		t.Error("stmt expected to be non-nil, got nil")
-	}
-
-	failIfError(t, err)
-
-	ff = p.PrepareContextCalls()
-	if len(ff) != 1 {
-		t.Errorf("prepare was expected to be called only once, but was called %d times", len(ff))
-	} else if ff[0].Query != dot.queries["select"] {
-		t.Errorf("prepare was expected to be called with %q query, got %q", dot.queries["select"], ff[0].Query)
-	} else if !reflect.DeepEqual(ff[0].Ctx, ctx) {
-		t.Errorf("prepare context does not match")
-	}
+		failIfError(t, err)
+		comparePrepareContextCalls(t, p.PrepareContextCalls(), ctx, tmpl)
+	})
 }
 
 func TestQuery(t *testing.T) {
 	dot := DotSql{
-		queries: map[string]string{
-			"select": "SELECT * from users WHERE name = ?",
+		queries: map[string]*template.Template{
+			"select": createTemplate(t, "SELECT * from users WHERE name = ?"),
 		},
 	}
 
@@ -177,71 +185,50 @@ func TestQuery(t *testing.T) {
 		}
 	}
 
-	arg := "test"
+	testArg := "test"
+	tmpl := extractTemplate(t, dot, "select")
 
-	// query not found
-	q := queryerStub(nil)
-	rows, err := dot.Query(q, "insert", arg)
-	if rows != nil {
-		t.Error("rows expected to be nil, got non-nil")
-	}
+	t.Run("query not found", func(t *testing.T) {
+		q := queryerStub(nil)
+		rows, err := dot.Query(q, "insert", testArg)
+		if rows != nil {
+			t.Error("rows expected to be nil, got non-nil")
+		}
 
-	if err == nil {
-		t.Error("err expected to be non-nil, got nil")
-	}
+		failIfNotError(t, err)
+		ff := q.QueryCalls()
+		if len(ff) > 0 {
+			t.Error("query was not expected to be called")
+		}
+	})
 
-	ff := q.QueryCalls()
-	if len(ff) > 0 {
-		t.Error("query was not expected to be called")
-	}
+	t.Run("error returned by DB", func(t *testing.T) {
+		q := queryerStub(errors.New("critical error"))
+		rows, err := dot.Query(q, "select", testArg)
+		if rows != nil {
+			t.Error("rows expected to be nil, got non-nil")
+		}
 
-	// error returned by db
-	q = queryerStub(errors.New("critical error"))
-	rows, err = dot.Query(q, "select", arg)
-	if rows != nil {
-		t.Error("rows expected to be nil, got non-nil")
-	}
+		failIfNotError(t, err)
+		compareCalls(t, q.QueryCalls(), "query", tmpl, testArg)
+	})
 
-	if err == nil {
-		t.Error("err expected to be non-nil, got nil")
-	}
+	t.Run("successful query", func(t *testing.T) {
+		q := queryerStub(nil)
+		rows, err := dot.Query(q, "select", testArg)
+		if rows == nil {
+			t.Error("rows expected to be non-nil, got nil")
+		}
 
-	ff = q.QueryCalls()
-	if len(ff) != 1 {
-		t.Errorf("query was expected to be called only once, but was called %d times", len(ff))
-	} else if ff[0].Query != dot.queries["select"] {
-		t.Errorf("query was expected to be called with %q query, got %q", dot.queries["select"], ff[0].Query)
-	} else if len(ff[0].Args) != 1 {
-		t.Errorf("query was expected to be called with 1 argument, got %d", len(ff[0].Args))
-	} else if !reflect.DeepEqual(ff[0].Args[0], arg) {
-		t.Errorf("query was expected to be called with %q argument, got %v", arg, ff[0].Args[0])
-	}
-
-	// successful query
-	q = queryerStub(nil)
-	rows, err = dot.Query(q, "select", arg)
-	if rows == nil {
-		t.Error("rows expected to be non-nil, got nil")
-	}
-
-	failIfError(t, err)
-
-	ff = q.QueryCalls()
-	if len(ff) != 1 {
-		t.Errorf("query was expected to be called only once, but was called %d times", len(ff))
-	} else if ff[0].Query != dot.queries["select"] {
-		t.Errorf("query was expected to be called with %q query, got %q", dot.queries["select"], ff[0].Query)
-	} else if len(ff[0].Args) != 1 {
-		t.Errorf("query was expected to be called with 1 argument, got %d", len(ff[0].Args))
-	} else if !reflect.DeepEqual(ff[0].Args[0], arg) {
-		t.Errorf("query was expected to be called with %q argument, got %v", arg, ff[0].Args[0])
-	}
+		failIfError(t, err)
+		compareCalls(t, q.QueryCalls(), "query", tmpl, testArg)
+	})
 }
 
 func TestQueryContext(t *testing.T) {
 	dot := DotSql{
-		queries: map[string]string{
-			"select": "SELECT * from users WHERE name = ?",
+		queries: map[string]*template.Template{
+			"select": createTemplate(t, "SELECT * from users WHERE name = ?"),
 		},
 	}
 
@@ -257,75 +244,131 @@ func TestQueryContext(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	arg := "test"
+	testArg := "test"
+	tmpl := extractTemplate(t, dot, "select")
 
-	// query not found
-	q := queryerContextStub(nil)
-	rows, err := dot.QueryContext(ctx, q, "insert", arg)
-	if rows != nil {
-		t.Error("rows expected to be nil, got non-nil")
+	t.Run("query not found", func(t *testing.T) {
+		q := queryerContextStub(nil)
+		rows, err := dot.QueryContext(ctx, q, "insert", testArg)
+		if rows != nil {
+			t.Error("rows expected to be nil, got non-nil")
+		}
+
+		failIfNotError(t, err)
+		ff := q.QueryContextCalls()
+		if len(ff) > 0 {
+			t.Error("query was not expected to be called")
+		}
+	})
+
+	t.Run("error returned by DB", func(t *testing.T) {
+		q := queryerContextStub(errors.New("critical error"))
+		rows, err := dot.QueryContext(ctx, q, "select", testArg)
+		if rows != nil {
+			t.Error("rows expected to be nil, got non-nil")
+		}
+
+		failIfNotError(t, err)
+		compareContextCalls(t, q.QueryContextCalls(), ctx, "query", tmpl, testArg)
+	})
+
+	t.Run("successful query", func(t *testing.T) {
+		q := queryerContextStub(nil)
+		rows, err := dot.QueryContext(ctx, q, "select", testArg)
+		if rows == nil {
+			t.Error("rows expected to be non-nil, got nil")
+		}
+
+		failIfError(t, err)
+		compareContextCalls(t, q.QueryContextCalls(), ctx, "query", tmpl, testArg)
+	})
+}
+
+func TestQueryWithData(t *testing.T) {
+	dot := DotSql{
+		queries: map[string]*template.Template{
+			"select": createTemplate(t, "SELECT * from users WHERE name = ?{{if  .exclude_deleted}} AND deleted IS NULL{{end}}"),
+		},
+	}
+	dotExcludeDeleted := dot.WithData(map[string]any{"exclude_deleted": true})
+
+	queryerStub := func(err error) *QueryerMock {
+		return &QueryerMock{
+			QueryFunc: func(_ string, _ ...any) (*sql.Rows, error) {
+				if err != nil {
+					return nil, err
+				}
+				return &sql.Rows{}, nil
+			},
+		}
 	}
 
-	if err == nil {
-		t.Error("err expected to be non-nil, got nil")
-	}
+	testArg := "test"
+	criticalError := errors.New("critical error")
 
-	ff := q.QueryContextCalls()
-	if len(ff) > 0 {
-		t.Error("query was not expected to be called")
-	}
+	t.Run("query not found", func(t *testing.T) {
+		q := queryerStub(nil)
+		rows, err := dot.Query(q, "insert", testArg)
+		if rows != nil {
+			t.Error("rows expected to be nil, got non-nil")
+		}
 
-	// error returned by db
-	q = queryerContextStub(errors.New("critical error"))
-	rows, err = dot.QueryContext(ctx, q, "select", arg)
-	if rows != nil {
-		t.Error("rows expected to be nil, got non-nil")
-	}
+		failIfNotError(t, err)
+		ff := q.QueryCalls()
+		if len(ff) > 0 {
+			t.Error("query was not expected to be called")
+		}
+	})
 
-	if err == nil {
-		t.Error("err expected to be non-nil, got nil")
-	}
+	t.Run("error returned by DB", func(t *testing.T) {
+		q := queryerStub(criticalError)
+		rows, err := dot.Query(q, "select", testArg)
+		if rows != nil {
+			t.Error("rows expected to be nil, got non-nil")
+		}
 
-	ff = q.QueryContextCalls()
-	if len(ff) != 1 {
-		t.Errorf("query was expected to be called only once, but was called %d times", len(ff))
-	} else if ff[0].Query != dot.queries["select"] {
-		t.Errorf("query was expected to be called with %q query, got %q", dot.queries["select"], ff[0].Query)
-	} else if len(ff[0].Args) != 1 {
-		t.Errorf("query was expected to be called with 1 argument, got %d", len(ff[0].Args))
-	} else if !reflect.DeepEqual(ff[0].Args[0], arg) {
-		t.Errorf("query was expected to be called with %q argument, got %v", arg, ff[0].Args[0])
-	} else if !reflect.DeepEqual(ff[0].Ctx, ctx) {
-		t.Errorf("query context does not match")
-	}
+		failIfNotError(t, err)
+		compareCalls(t, q.QueryCalls(), "query", extractTemplate(t, dot, "select"), testArg)
+	})
 
-	// successful query
-	q = queryerContextStub(nil)
-	rows, err = dot.QueryContext(ctx, q, "select", arg)
-	if rows == nil {
-		t.Error("rows expected to be non-nil, got nil")
-	}
+	t.Run("error returned by DB (with data)", func(t *testing.T) {
+		q := queryerStub(criticalError)
+		rows, err := dotExcludeDeleted.Query(q, "select", testArg)
+		if rows != nil {
+			t.Error("rows expected to be nil, got non-nil")
+		}
 
-	failIfError(t, err)
+		failIfNotError(t, err)
+		compareCalls(t, q.QueryCalls(), "query", extractTemplate(t, dotExcludeDeleted, "select"), testArg)
+	})
 
-	ff = q.QueryContextCalls()
-	if len(ff) != 1 {
-		t.Errorf("query was expected to be called only once, but was called %d times", len(ff))
-	} else if ff[0].Query != dot.queries["select"] {
-		t.Errorf("query was expected to be called with %q query, got %q", dot.queries["select"], ff[0].Query)
-	} else if len(ff[0].Args) != 1 {
-		t.Errorf("query was expected to be called with 1 argument, got %d", len(ff[0].Args))
-	} else if !reflect.DeepEqual(ff[0].Args[0], arg) {
-		t.Errorf("query was expected to be called with %q argument, got %v", arg, ff[0].Args[0])
-	} else if !reflect.DeepEqual(ff[0].Ctx, ctx) {
-		t.Errorf("query context does not match")
-	}
+	t.Run("successful query", func(t *testing.T) {
+		q := queryerStub(nil)
+		rows, err := dot.Query(q, "select", testArg)
+		if rows == nil {
+			t.Error("rows expected to be non-nil, got nil")
+		}
+
+		failIfError(t, err)
+		compareCalls(t, q.QueryCalls(), "query", extractTemplate(t, dot, "select"), testArg)
+	})
+
+	t.Run("successful query (with data)", func(t *testing.T) {
+		q := queryerStub(nil)
+		rows, err := dotExcludeDeleted.Query(q, "select", testArg)
+		if rows == nil {
+			t.Error("rows expected to be non-nil, got nil")
+		}
+
+		failIfError(t, err)
+		compareCalls(t, q.QueryCalls(), "query", extractTemplate(t, dotExcludeDeleted, "select"), testArg)
+	})
 }
 
 func TestQueryRow(t *testing.T) {
 	dot := DotSql{
-		queries: map[string]string{
-			"select": "SELECT * from users WHERE name = ?",
+		queries: map[string]*template.Template{
+			"select": createTemplate(t, "SELECT * from users WHERE name = ?"),
 		},
 	}
 
@@ -340,66 +383,48 @@ func TestQueryRow(t *testing.T) {
 		}
 	}
 
-	arg := "test"
+	testArg := "test"
 
-	// query not found
-	q := queryRowerStub(true)
-	row, err := dot.QueryRow(q, "insert", arg)
-	if row != nil {
-		t.Error("row expected to be nil, got non-nil")
-	}
+	t.Run("query not found", func(t *testing.T) {
+		q := queryRowerStub(true)
+		row, err := dot.QueryRow(q, "insert", testArg)
+		if row != nil {
+			t.Error("row expected to be nil, got non-nil")
+		}
 
-	if err == nil {
-		t.Error("err expected to be non-nil, got nil")
-	}
+		failIfNotError(t, err)
+		ff := q.QueryRowCalls()
+		if len(ff) > 0 {
+			t.Error("query was not expected to be called")
+		}
+	})
 
-	ff := q.QueryRowCalls()
-	if len(ff) > 0 {
-		t.Error("query was not expected to be called")
-	}
+	t.Run("error returned by DB", func(t *testing.T) {
+		q := queryRowerStub(false)
+		row, _ := dot.QueryRow(q, "select", testArg)
+		if row != nil {
+			t.Error("row expected to be nil, got non-nil")
+		}
 
-	err = nil
-	// error returned by db
-	q = queryRowerStub(false)
-	row, err = dot.QueryRow(q, "select", arg)
-	if row != nil {
-		t.Error("row expected to be nil, got non-nil")
-	}
+		compareCalls(t, q.QueryRowCalls(), "query", extractTemplate(t, dot, "select"), testArg)
+	})
 
-	ff = q.QueryRowCalls()
-	if len(ff) != 1 {
-		t.Errorf("query was expected to be called only once, but was called %d times", len(ff))
-	} else if ff[0].Query != dot.queries["select"] {
-		t.Errorf("query was expected to be called with %q query, got %q", dot.queries["select"], ff[0].Query)
-	} else if len(ff[0].Args) != 1 {
-		t.Errorf("query was expected to be called with 1 argument, got %d", len(ff[0].Args))
-	} else if !reflect.DeepEqual(ff[0].Args[0], arg) {
-		t.Errorf("query was expected to be called with %q argument, got %v", arg, ff[0].Args[0])
-	}
+	t.Run("successful query", func(t *testing.T) {
+		q := queryRowerStub(true)
+		row, err := dot.QueryRow(q, "select", testArg)
+		if row == nil {
+			t.Error("row expected to be non-nil, got nil")
+		}
 
-	// successful query
-	q = queryRowerStub(true)
-	row, err = dot.QueryRow(q, "select", arg)
-	if row == nil {
-		t.Error("row expected to be non-nil, got nil")
-	}
-
-	ff = q.QueryRowCalls()
-	if len(ff) != 1 {
-		t.Errorf("query was expected to be called only once, but was called %d times", len(ff))
-	} else if ff[0].Query != dot.queries["select"] {
-		t.Errorf("query was expected to be called with %q query, got %q", dot.queries["select"], ff[0].Query)
-	} else if len(ff[0].Args) != 1 {
-		t.Errorf("query was expected to be called with 1 argument, got %d", len(ff[0].Args))
-	} else if !reflect.DeepEqual(ff[0].Args[0], arg) {
-		t.Errorf("query was expected to be called with %q argument, got %v", arg, ff[0].Args[0])
-	}
+		failIfError(t, err)
+		compareCalls(t, q.QueryRowCalls(), "query", extractTemplate(t, dot, "select"), testArg)
+	})
 }
 
 func TestQueryRowContext(t *testing.T) {
 	dot := DotSql{
-		queries: map[string]string{
-			"select": "SELECT * from users WHERE name = ?",
+		queries: map[string]*template.Template{
+			"select": createTemplate(t, "SELECT * from users WHERE name = ?"),
 		},
 	}
 
@@ -415,64 +440,42 @@ func TestQueryRowContext(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	arg := "test"
+	testArg := "test"
+	template := extractTemplate(t, dot, "select")
 
-	// query not found
-	q := queryRowerContextStub(true)
-	row, err := dot.QueryRowContext(ctx, q, "insert", arg)
-	if row != nil {
-		t.Error("row expected to be nil, got non-nil")
-	}
+	t.Run("query not found", func(t *testing.T) {
+		q := queryRowerContextStub(true)
+		row, err := dot.QueryRowContext(ctx, q, "insert", testArg)
+		if row != nil {
+			t.Error("row expected to be nil, got non-nil")
+		}
 
-	if err == nil {
-		t.Error("err expected to be non-nil, got nil")
-	}
+		failIfNotError(t, err)
+		ff := q.QueryRowContextCalls()
+		if len(ff) > 0 {
+			t.Error("query was not expected to be called")
+		}
+	})
 
-	ff := q.QueryRowContextCalls()
-	if len(ff) > 0 {
-		t.Error("query was not expected to be called")
-	}
+	t.Run("error returned by DB", func(t *testing.T) {
+		q := queryRowerContextStub(false)
+		row, _ := dot.QueryRowContext(ctx, q, "select", testArg)
+		if row != nil {
+			t.Error("row expected to be nil, got non-nil")
+		}
 
-	err = nil
-	// error returned by db
-	q = queryRowerContextStub(false)
-	row, err = dot.QueryRowContext(ctx, q, "select", arg)
-	if row != nil {
-		t.Error("row expected to be nil, got non-nil")
-	}
+		compareContextCalls(t, q.QueryRowContextCalls(), ctx, "query", template, testArg)
+	})
 
-	ff = q.QueryRowContextCalls()
-	if len(ff) != 1 {
-		t.Errorf("query was expected to be called only once, but was called %d times", len(ff))
-	} else if ff[0].Query != dot.queries["select"] {
-		t.Errorf("query was expected to be called with %q query, got %q", dot.queries["select"], ff[0].Query)
-	} else if len(ff[0].Args) != 1 {
-		t.Errorf("query was expected to be called with 1 argument, got %d", len(ff[0].Args))
-	} else if !reflect.DeepEqual(ff[0].Args[0], arg) {
-		t.Errorf("query was expected to be called with %q argument, got %v", arg, ff[0].Args[0])
-	} else if !reflect.DeepEqual(ff[0].Ctx, ctx) {
-		t.Errorf("query context does not match")
-	}
+	t.Run("successful query", func(t *testing.T) {
+		q := queryRowerContextStub(true)
+		row, _ := dot.QueryRowContext(ctx, q, "select", testArg)
+		if row == nil {
+			t.Error("row expected to be non-nil, got nil")
+		}
 
-	// successful query
-	q = queryRowerContextStub(true)
-	row, err = dot.QueryRowContext(ctx, q, "select", arg)
-	if row == nil {
-		t.Error("row expected to be non-nil, got nil")
-	}
-
-	ff = q.QueryRowContextCalls()
-	if len(ff) != 1 {
-		t.Errorf("query was expected to be called only once, but was called %d times", len(ff))
-	} else if ff[0].Query != dot.queries["select"] {
-		t.Errorf("query was expected to be called with %q query, got %q", dot.queries["select"], ff[0].Query)
-	} else if len(ff[0].Args) != 1 {
-		t.Errorf("query was expected to be called with 1 argument, got %d", len(ff[0].Args))
-	} else if !reflect.DeepEqual(ff[0].Args[0], arg) {
-		t.Errorf("query was expected to be called with %q argument, got %v", arg, ff[0].Args[0])
-	} else if !reflect.DeepEqual(ff[0].Ctx, ctx) {
-		t.Errorf("query context does not match")
-	}
+		compareContextCalls(t, q.QueryRowContextCalls(), ctx, "query", template, testArg)
+	})
 }
 
 type sqlResult struct{}
@@ -487,8 +490,8 @@ func (s sqlResult) RowsAffected() (int64, error) {
 
 func TestExec(t *testing.T) {
 	dot := DotSql{
-		queries: map[string]string{
-			"select": "SELECT * from users WHERE name = ?",
+		queries: map[string]*template.Template{
+			"select": createTemplate(t, "SELECT * from users WHERE name = ?"),
 		},
 	}
 
@@ -503,71 +506,50 @@ func TestExec(t *testing.T) {
 		}
 	}
 
-	arg := "test"
+	testArg := "test"
+	template := extractTemplate(t, dot, "select")
 
-	// query not found
-	q := execerStub(nil)
-	result, err := dot.Exec(q, "insert", arg)
-	if result != nil {
-		t.Error("result expected to be nil, got non-nil")
-	}
+	t.Run("query not found", func(t *testing.T) {
+		q := execerStub(nil)
+		result, err := dot.Exec(q, "insert", testArg)
+		if result != nil {
+			t.Error("result expected to be nil, got non-nil")
+		}
 
-	if err == nil {
-		t.Error("err expected to be non-nil, got nil")
-	}
+		failIfNotError(t, err)
+		ff := q.ExecCalls()
+		if len(ff) > 0 {
+			t.Error("exec was not expected to be called")
+		}
+	})
 
-	ff := q.ExecCalls()
-	if len(ff) > 0 {
-		t.Error("exec was not expected to be called")
-	}
+	t.Run("error returned by DB", func(t *testing.T) {
+		q := execerStub(errors.New("critical error"))
+		result, err := dot.Exec(q, "select", testArg)
+		if result != nil {
+			t.Error("result expected to be nil, got non-nil")
+		}
 
-	// error returned by db
-	q = execerStub(errors.New("critical error"))
-	result, err = dot.Exec(q, "select", arg)
-	if result != nil {
-		t.Error("result expected to be nil, got non-nil")
-	}
+		failIfNotError(t, err)
+		compareCalls(t, q.ExecCalls(), "exec", template, testArg)
+	})
 
-	if err == nil {
-		t.Error("err expected to be non-nil, got nil")
-	}
+	t.Run("successful query exec", func(t *testing.T) {
+		q := execerStub(nil)
+		result, err := dot.Exec(q, "select", testArg)
+		if result == nil {
+			t.Error("result expected to be non-nil, got nil")
+		}
 
-	ff = q.ExecCalls()
-	if len(ff) != 1 {
-		t.Errorf("exec was expected to be called only once, but was called %d times", len(ff))
-	} else if ff[0].Query != dot.queries["select"] {
-		t.Errorf("exec was expected to be called with %q query, got %q", dot.queries["select"], ff[0].Query)
-	} else if len(ff[0].Args) != 1 {
-		t.Errorf("exec was expected to be called with 1 argument, got %d", len(ff[0].Args))
-	} else if !reflect.DeepEqual(ff[0].Args[0], arg) {
-		t.Errorf("exec was expected to be called with %q argument, got %v", arg, ff[0].Args[0])
-	}
-
-	// successful query exec
-	q = execerStub(nil)
-	result, err = dot.Exec(q, "select", arg)
-	if result == nil {
-		t.Error("result expected to be non-nil, got nil")
-	}
-
-	failIfError(t, err)
-
-	ff = q.ExecCalls()
-	if len(ff) != 1 {
-		t.Errorf("exec was expected to be called only once, but was called %d times", len(ff))
-	} else if ff[0].Query != dot.queries["select"] {
-		t.Errorf("exec was expected to be called with %q query, got %q", dot.queries["select"], ff[0].Query)
-	} else if len(ff[0].Args) != 1 {
-		t.Errorf("exec was expected to be called with 1 argument, got %d", len(ff[0].Args))
-	} else if !reflect.DeepEqual(ff[0].Args[0], arg) {
-		t.Errorf("exec was expected to be called with %q argument, got %v", arg, ff[0].Args[0])
-	}
+		failIfError(t, err)
+		compareCalls(t, q.ExecCalls(), "exec", template, testArg)
+	})
 }
 
 func TestExecContext(t *testing.T) {
 	dot := DotSql{
-		queries: map[string]string{
-			"select": "SELECT * from users WHERE name = ?",
+		queries: map[string]*template.Template{
+			"select": createTemplate(t, "SELECT * from users WHERE name = ?"),
 		},
 	}
 
@@ -583,69 +565,45 @@ func TestExecContext(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	arg := "test"
+	testArg := "test"
+	tmpl := extractTemplate(t, dot, "select")
 
-	// query not found
-	q := execerContextStub(nil)
-	result, err := dot.ExecContext(ctx, q, "insert", arg)
-	if result != nil {
-		t.Error("result expected to be nil, got non-nil")
-	}
+	t.Run("query not found", func(t *testing.T) {
+		q := execerContextStub(nil)
+		result, err := dot.ExecContext(ctx, q, "insert", testArg)
+		if result != nil {
+			t.Error("result expected to be nil, got non-nil")
+		}
 
-	if err == nil {
-		t.Error("err expected to be non-nil, got nil")
-	}
+		failIfNotError(t, err)
+		ff := q.ExecContextCalls()
+		if len(ff) > 0 {
+			t.Error("exec was not expected to be called")
+		}
+	})
 
-	ff := q.ExecContextCalls()
-	if len(ff) > 0 {
-		t.Error("exec was not expected to be called")
-	}
+	t.Run("error returned by DB", func(t *testing.T) {
+		q := execerContextStub(errors.New("critical error"))
+		result, err := dot.ExecContext(ctx, q, "select", testArg)
+		if result != nil {
+			t.Error("result expected to be nil, got non-nil")
+		}
 
-	// error returned by db
-	q = execerContextStub(errors.New("critical error"))
-	result, err = dot.ExecContext(ctx, q, "select", arg)
-	if result != nil {
-		t.Error("result expected to be nil, got non-nil")
-	}
+		failIfNotError(t, err)
+		compareContextCalls(t, q.ExecContextCalls(), ctx, "exec", tmpl, testArg)
+	})
 
-	if err == nil {
-		t.Error("err expected to be non-nil, got nil")
-	}
+	t.Run("successful query exec", func(t *testing.T) {
+		q := execerContextStub(nil)
+		result, err := dot.ExecContext(ctx, q, "select", testArg)
+		if result == nil {
+			t.Error("result expected to be non-nil, got nil")
+		}
 
-	ff = q.ExecContextCalls()
-	if len(ff) != 1 {
-		t.Errorf("exec was expected to be called only once, but was called %d times", len(ff))
-	} else if ff[0].Query != dot.queries["select"] {
-		t.Errorf("exec was expected to be called with %q query, got %q", dot.queries["select"], ff[0].Query)
-	} else if len(ff[0].Args) != 1 {
-		t.Errorf("exec was expected to be called with 1 argument, got %d", len(ff[0].Args))
-	} else if !reflect.DeepEqual(ff[0].Args[0], arg) {
-		t.Errorf("exec was expected to be called with %q argument, got %v", arg, ff[0].Args[0])
-	} else if !reflect.DeepEqual(ff[0].Ctx, ctx) {
-		t.Errorf("exec context does not match")
-	}
+		failIfError(t, err)
 
-	// successful query exec
-	q = execerContextStub(nil)
-	result, err = dot.ExecContext(ctx, q, "select", arg)
-	if result == nil {
-		t.Error("result expected to be non-nil, got nil")
-	}
-
-	failIfError(t, err)
-
-	ff = q.ExecContextCalls()
-	if len(ff) != 1 {
-		t.Errorf("exec was expected to be called only once, but was called %d times", len(ff))
-	} else if ff[0].Query != dot.queries["select"] {
-		t.Errorf("exec was expected to be called with %q query, got %q", dot.queries["select"], ff[0].Query)
-	} else if len(ff[0].Args) != 1 {
-		t.Errorf("exec was expected to be called with 1 argument, got %d", len(ff[0].Args))
-	} else if !reflect.DeepEqual(ff[0].Args[0], arg) {
-		t.Errorf("exec was expected to be called with %q argument, got %v", arg, ff[0].Args[0])
-	} else if !reflect.DeepEqual(ff[0].Ctx, ctx) {
-		t.Errorf("exec context does not match")
-	}
+		compareContextCalls(t, q.ExecContextCalls(), ctx, "exec", tmpl, testArg)
+	})
 }
 
 func TestLoad(t *testing.T) {
@@ -713,8 +671,9 @@ func TestQueries(t *testing.T) {
 	}
 
 	for name, query := range got {
-		if query != expectedQueryMap[name] {
-			t.Errorf("QueryMap()[%s] == '%s', expected '%s'", name, query, expectedQueryMap[name])
+		tmpl := executeTemplate(t, query)
+		if tmpl != expectedQueryMap[name] {
+			t.Errorf("QueryMap()[%s] == '%s', expected '%s'", name, tmpl, expectedQueryMap[name])
 		}
 	}
 }
@@ -753,8 +712,18 @@ func TestMergeTakesPresecendeFromLastArgument(t *testing.T) {
 
 	x := Merge(a, b, c)
 
-	got := x.QueryMap()["query"]
+	got := executeTemplate(t, x.QueryMap()["query"])
 	if expectedQuery != got {
 		t.Errorf("Expected query: '%s', got: '%s'", expectedQuery, got)
+	}
+}
+
+func TestTemplatesFailQuickly(t *testing.T) {
+	_, err := LoadFromString("-- name: bad-query\nSELECT * FROM {{if .user}}users{{else}}clients")
+	expectedErr := "template: bad-query:1: unexpected EOF"
+	if err == nil {
+		t.Fatalf("expected '%s' error, but didn't get one", expectedErr)
+	} else if err.Error() != expectedErr {
+		t.Errorf("expected '%s' error, but got '%v'", expectedErr, err)
 	}
 }
